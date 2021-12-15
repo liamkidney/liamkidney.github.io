@@ -4,7 +4,7 @@ const PARENT_DIV = document.getElementById("mainDiv");
 
 function getBaseUrl(username, ip_address) {
     // const url = "http://192.168.1.232/api/qRH0xL93TL5YXlEiWHVuQSNiDkkTgj-CkklZNX2A/lights/9";
-    return "http://" + ip_address + "/api/" + username + "/lights";
+    return "https://" + ip_address + "/api/" + username + "/lights";
 }
 
 function getDeviceUrl(username, ip_address, device_id) {
@@ -38,10 +38,7 @@ function draw(node, username, ip_address, dataDictionary) {
 }
 
 function refresh(node, username, ip_address) {
-
-    // const url = "http://192.168.1.232/api/qRH0xL93TL5YXlEiWHVuQSNiDkkTgj-CkklZNX2A/lights/9";
-
-    const url = "http://" + ip_address + "/api/" + username + "/lights";
+    const url = getBaseUrl(username, ip_address);
 
     getJSON(url, function (dataDictionary) {
         draw(node, username, ip_address, dataDictionary)
