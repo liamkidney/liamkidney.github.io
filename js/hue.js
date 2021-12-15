@@ -46,9 +46,8 @@ function refresh(node, username, ip_address) {
 }
 
 function init() {
-    const username = getLocal(COOKIE_USERNAME);
-    const ip_address = getLocal(COOKIE_IP_ADDRESS);
-
+    const username = getCookie(COOKIE_USERNAME);
+    const ip_address = getCookie(COOKIE_IP_ADDRESS);
 
     setTitle('Device Control');
     const input_div = addContainer(PARENT_DIV);
@@ -87,8 +86,8 @@ function init() {
 function saveButtonClicked(ip_address_input, username_input, control_div) {
     console.log('saveButtonClicked');
 
-    setLocal(COOKIE_USERNAME, username_input.value);
-    setLocal(COOKIE_IP_ADDRESS, ip_address_input.value);
+    setCookie(COOKIE_USERNAME, username_input.value);
+    setCookie(COOKIE_IP_ADDRESS, ip_address_input.value);
 
     refresh(control_div, username_input.value, ip_address_input.value);
 
