@@ -1,7 +1,7 @@
 /** Pure Numberlink domain logic. Coordinates are [row, column]. */
 export type Cell = readonly [number, number];
 export type Pair = readonly [Cell, Cell];
-export type Difficulty = 'easy' | 'medium' | 'hard';
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'unrated';
 export type Board = {
   id: string;
   width: number;
