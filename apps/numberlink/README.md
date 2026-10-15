@@ -35,4 +35,4 @@ Four current iteration-5 boards (levels 000031–000034) generated offline and p
 - The **All levels** control opens a virtualised, searchable list suitable for large board catalogues. Search by level number or board size such as `10x10`.
 - Saved progress is keyed by board ID, and current selection is saved by ID (with migration from the older numeric selection). Removed levels are excluded from progress counts.
 - Difficulty remains `unrated` until playtesting validates a grading model.
-- Completing a puzzle still requires connecting all pairs **and** filling every square. Purchases, authentication and synchronisation across devices remain later steps. Purchases, authentication, and store builds are later steps.
+- Completing a puzzle still requires connecting all pairs **and** filling every square. Purchases, authentication, store builds and synchronisation across devices remain later steps.
