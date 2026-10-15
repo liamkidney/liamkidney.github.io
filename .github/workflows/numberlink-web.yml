@@ -1,4 +1,4 @@
-name: Numberlink web build
+name: Numberlink web build and deploy
 
 on:
   push:
@@ -42,10 +42,29 @@ jobs:
           test -s apps/numberlink/dist/index.html
           test -s apps/numberlink/dist/manifest.webmanifest
           grep -q '/numberlink/' apps/numberlink/dist/index.html
+      - name: Combine root website and Numberlink
+        run: |
+          mkdir -p _site/numberlink
+          cp index.html _site/index.html
+          cp -R js _site/js
+          find . -maxdepth 1 -type f \( -name '*.ico' -o -name '*.png' \) -exec cp {} _site/ \;
+          cp -R apps/numberlink/dist/. _site/numberlink/
+          touch _site/.nojekyll
       - name: Upload production web bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: numberlink-web
-          path: apps/numberlink/dist/
-          if-no-files-found: error
-          retention-days: 14
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
