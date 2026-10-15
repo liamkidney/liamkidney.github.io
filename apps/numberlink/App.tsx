@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  PanResponder, Platform, Pressable, SafeAreaView,
-  ScrollView, StatusBar, StyleSheet, Text, View, useWindowDimensions,
+  FlatList, Modal, PanResponder, Platform, Pressable, SafeAreaView,
+  ScrollView, StatusBar, StyleSheet, Text, TextInput, View, useWindowDimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Circle, Line, Path as SvgPath, Rect, Text as SvgText } from 'react-native-svg';
@@ -10,6 +10,7 @@ import type { Board, Paths } from './src/engine';
 import { endpointPair, endpoints, extendPath, isSolved, progress, sampledCells, startPath, toCell } from './src/engine';
 
 const BOARDS = rawBoards as unknown as Board[];
+const BOARD_IDS = new Set(BOARDS.map(board => board.id));
 const SAVE_KEY = 'numberlink:prototype:v1';
 // Browser-only storage key used by the first standalone HTML preview.
 const LEGACY_WEB_KEY = 'numberlink-preview-v1';
@@ -25,10 +26,11 @@ const PALETTE = [
 
 type Saved = {
   selected: number;
+  selectedId?: string; // Stable across future insertions and reordering of the level library.
   completed: string[];
   pathsById: Record<string, Paths>;
 };
-const EMPTY: Saved = { selected: 0, completed: [], pathsById: {} };
+const EMPTY: Saved = { selected: 0, selectedId: BOARDS[0].id, completed: [], pathsById: {} };
 
 function touchPoint(event: any): [number, number] {
   return [event.nativeEvent.locationX, event.nativeEvent.locationY];
@@ -152,6 +154,17 @@ export default function App() {
   const [saved, setSaved] = useState<Saved>(EMPTY);
   const [hydrated, setHydrated] = useState(false);
   const [lastEdited, setLastEdited] = useState<number | null>(null);
+  const [levelPickerOpen, setLevelPickerOpen] = useState(false);
+  const [levelSearch, setLevelSearch] = useState('');
+
+  // Rendering a virtualised list avoids squeezing hundreds of buttons into one row.
+  const filteredLevels = useMemo(() => {
+    const query = levelSearch.trim().toLowerCase().replace('×', 'x');
+    return BOARDS.map((board, index) => ({ board, index })).filter(({ board, index }) =>
+      !query || String(index + 1).startsWith(query) || board.id.toLowerCase().includes(query) ||
+      `${board.width}x${board.height}`.includes(query)
+    );
+  }, [levelSearch]);
 
   useEffect(() => {
     let mounted = true;
@@ -164,8 +177,18 @@ export default function App() {
       if (value) {
         try {
           const data = JSON.parse(value);
-          if (data && Array.isArray(data.completed) && data.pathsById && Number.isInteger(data.selected)) {
-            setSaved({ selected: Math.max(0, Math.min(BOARDS.length - 1, data.selected)), completed: data.completed, pathsById: data.pathsById });
+          if (data && Array.isArray(data.completed) && data.pathsById) {
+            const selectedIdIndex = typeof data.selectedId === 'string'
+              ? BOARDS.findIndex(board => board.id === data.selectedId) : -1;
+            const previousIndex = Number.isInteger(data.selected) ? data.selected : 0;
+            const selected = selectedIdIndex >= 0
+              ? selectedIdIndex : Math.max(0, Math.min(BOARDS.length - 1, previousIndex));
+            setSaved({
+              selected,
+              selectedId: BOARDS[selected].id,
+              completed: data.completed.filter((id: string) => BOARD_IDS.has(id)),
+              pathsById: Object.fromEntries(Object.entries(data.pathsById).filter(([id]) => BOARD_IDS.has(id))) as Record<string, Paths>,
+            });
           }
         } catch { /* Start with a clean game when storage is corrupt. */ }
       }
@@ -185,7 +208,8 @@ export default function App() {
   const chooseLevel = (next: number) => {
     if (next < 0 || next >= BOARDS.length) return;
     setLastEdited(null);
-    setSaved(previous => ({ ...previous, selected: next }));
+    setLevelPickerOpen(false);
+    setSaved(previous => ({ ...previous, selected: next, selectedId: BOARDS[next].id }));
   };
   const changePaths = (next: Paths, pair: number) => {
     setLastEdited(pair);
@@ -219,29 +243,26 @@ export default function App() {
             <Text style={styles.subtitle}>A quiet little puzzle for your mind.</Text>
           </View>
           <View style={styles.completedCount}>
-            <Text style={styles.completedNum}>{saved.completed.length}<Text style={{ fontSize: 12, color: MUTED }}>/{BOARDS.length}</Text></Text>
+            <Text style={styles.completedNum}>{saved.completed.filter(id => BOARD_IDS.has(id)).length}<Text style={{ fontSize: 12, color: MUTED }}>/{BOARDS.length}</Text></Text>
             <Text style={styles.completedCaption}>SOLVED</Text>
           </View>
         </View>
 
         <View style={styles.levelsHeader}>
           <Text style={styles.sectionLabel}>CHOOSE A LEVEL</Text>
-          <Text style={styles.sectionValue}>4 puzzles</Text>
+          <Text style={styles.sectionValue}>{BOARDS.length} puzzles</Text>
         </View>
-        <View style={styles.levelsRow}>
-          {BOARDS.map((b, i) => {
-            const selected = i === level;
-            const done = saved.completed.includes(b.id);
-            return (
-              <Pressable key={b.id} onPress={() => chooseLevel(i)}
-                style={[styles.levelPill, selected && styles.activeLevel]}>
-                <Text style={[styles.levelNum, selected && { color: '#fff' }]}>{String(i + 1).padStart(2, '0')}</Text>
-                <Text style={[styles.levelStatus, selected && { color: '#D8E4ED' }]}>{done ? '✓ DONE' : `${b.width} × ${b.height}`}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
+        <Pressable style={styles.currentLevel} accessibilityRole="button"
+          accessibilityLabel="Browse all Numberlink levels"
+          onPress={() => { setLevelSearch(''); setLevelPickerOpen(true); }}>
+          <View>
+            <Text style={styles.currentLevelTitle}>Level {String(level + 1).padStart(2, '0')} <Text style={styles.currentLevelTotal}>of {BOARDS.length}</Text></Text>
+            <Text style={styles.currentLevelDetails}>
+              {board.width} × {board.height} · {board.pairs.length} pairs · {saved.completed.includes(board.id) ? 'Solved' : 'Not solved'}
+            </Text>
+          </View>
+          <Text style={styles.currentLevelAction}>All levels  ›</Text>
+        </Pressable>
         <View style={styles.playHeader}>
           <View>
             <Text style={styles.sectionLabel}>LEVEL {String(level + 1).padStart(2, '0')}</Text>
@@ -281,6 +302,54 @@ export default function App() {
         </View>
         <Text style={styles.footer}>PROTOTYPE 01  ·  ALL PROGRESS SAVED ON THIS DEVICE</Text>
       </ScrollView>
+      <Modal visible={levelPickerOpen} animationType="slide" onRequestClose={() => setLevelPickerOpen(false)}>
+        <SafeAreaView style={styles.pickerScreen}>
+          <View style={styles.pickerHeader}>
+            <View>
+              <Text style={styles.sectionLabel}>NUMBERLINK LIBRARY</Text>
+              <Text style={styles.pickerTitle}>Choose a level</Text>
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close level list"
+              onPress={() => setLevelPickerOpen(false)} style={styles.pickerClose}>
+              <Text style={styles.pickerCloseText}>Done</Text>
+            </Pressable>
+          </View>
+          <TextInput value={levelSearch} onChangeText={setLevelSearch} autoCorrect={false}
+            placeholder="Search level number or size (e.g. 10x10)"
+            placeholderTextColor={MUTED} style={styles.pickerSearch}
+            accessibilityLabel="Search levels" />
+          <Text style={styles.pickerCount}>{filteredLevels.length} of {BOARDS.length} levels</Text>
+          <FlatList
+            data={filteredLevels}
+            keyExtractor={item => item.board.id}
+            keyboardShouldPersistTaps="handled"
+            initialNumToRender={18}
+            maxToRenderPerBatch={24}
+            windowSize={9}
+            contentContainerStyle={styles.pickerList}
+            ListEmptyComponent={<Text style={styles.pickerEmpty}>No matching levels.</Text>}
+            renderItem={({ item }) => {
+              const selected = item.index === level;
+              const done = saved.completed.includes(item.board.id);
+              return (
+                <Pressable accessibilityRole="button"
+                  accessibilityLabel={`Level ${item.index + 1}, ${item.board.width} by ${item.board.height}, ${done ? 'solved' : 'not solved'}`}
+                  onPress={() => chooseLevel(item.index)}
+                  style={[styles.pickerRow, selected && styles.pickerRowSelected]}>
+                  <View style={styles.pickerLevelNumber}>
+                    <Text style={styles.pickerNumberText}>{String(item.index + 1).padStart(2, '0')}</Text>
+                  </View>
+                  <View style={styles.pickerRowDetail}>
+                    <Text style={styles.pickerRowTitle}>{item.board.width} × {item.board.height} · {item.board.pairs.length} pairs</Text>
+                    <Text style={styles.pickerRowSubtitle}>{item.board.difficulty === 'unrated' ? 'Unrated' : item.board.difficulty} · {done ? 'Completed' : 'Not solved'}</Text>
+                  </View>
+                  <Text style={styles.pickerRowChevron}>{selected ? '✓' : '›'}</Text>
+                </Pressable>
+              );
+            }}
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -298,11 +367,6 @@ const styles = StyleSheet.create({
   levelsHeader: { width: '100%', maxWidth: 480, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 9 },
   sectionLabel: { color: '#8B8D91', fontSize: 10, fontWeight: '800', letterSpacing: 1.35 },
   sectionValue: { color: MUTED, fontSize: 11 },
-  levelsRow: { width: '100%', maxWidth: 480, flexDirection: 'row', gap: 8, marginBottom: 25 },
-  levelPill: { flex: 1, backgroundColor: '#EFEBE4', minHeight: 62, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  activeLevel: { backgroundColor: INK },
-  levelNum: { fontSize: 18, color: INK, fontWeight: '800' },
-  levelStatus: { fontSize: 9, color: MUTED, marginTop: 4, fontWeight: '700' },
   playHeader: { width: '100%', maxWidth: 480, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   levelTitle: { color: INK, fontWeight: '700', fontSize: 19, marginTop: 4, letterSpacing: -.3 },
   difficultyPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EFEBE5', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 10 },
@@ -323,4 +387,26 @@ const styles = StyleSheet.create({
   importantButton: { backgroundColor: INK },
   smallButtonText: { color: '#405064', fontWeight: '700', fontSize: 11 },
   footer: { color: '#A8A4A0', fontSize: 9, letterSpacing: 1.0, fontWeight: '700', marginTop: 25, textAlign: 'center' },
+  currentLevel: { width: '100%', maxWidth: 480, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#EFEBE4', borderRadius: 13, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 25 },
+  currentLevelTitle: { color: INK, fontSize: 17, fontWeight: '800' },
+  currentLevelTotal: { color: MUTED, fontWeight: '600', fontSize: 12 },
+  currentLevelDetails: { color: MUTED, fontSize: 11, marginTop: 5 },
+  currentLevelAction: { color: INK, fontSize: 12, fontWeight: '700' },
+  pickerScreen: { flex: 1, backgroundColor: CREAM },
+  pickerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 22, paddingTop: 19, paddingBottom: 20 },
+  pickerTitle: { color: INK, fontSize: 25, fontWeight: '800', marginTop: 5 },
+  pickerClose: { backgroundColor: '#EAE6DD', borderRadius: 9, paddingHorizontal: 16, paddingVertical: 12 },
+  pickerCloseText: { color: INK, fontWeight: '700', fontSize: 13 },
+  pickerSearch: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2DDD3', marginHorizontal: 20, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 11, color: INK, fontSize: 14 },
+  pickerCount: { color: MUTED, marginHorizontal: 22, marginTop: 14, marginBottom: 7, fontSize: 11 },
+  pickerList: { paddingHorizontal: 20, paddingBottom: 36 },
+  pickerEmpty: { textAlign: 'center', marginTop: 35, color: MUTED },
+  pickerRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#E5E0D7', borderRadius: 8 },
+  pickerRowSelected: { backgroundColor: '#E4EBE4' },
+  pickerLevelNumber: { width: 43, height: 43, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAE6DD' },
+  pickerNumberText: { color: INK, fontSize: 15, fontWeight: '800' },
+  pickerRowDetail: { flex: 1 },
+  pickerRowTitle: { color: INK, fontSize: 15, fontWeight: '700' },
+  pickerRowSubtitle: { color: MUTED, fontSize: 11, marginTop: 4, textTransform: 'capitalize' },
+  pickerRowChevron: { color: '#657783', fontSize: 20, fontWeight: '700' },
 });
