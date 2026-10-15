@@ -187,7 +187,7 @@ export default function App() {
               selected,
               selectedId: BOARDS[selected].id,
               completed: data.completed.filter((id: string) => BOARD_IDS.has(id)),
-              pathsById: Object.fromEntries(Object.entries(data.pathsById).filter(([id]) => BOARD_IDS.has(id))),
+              pathsById: Object.fromEntries(Object.entries(data.pathsById).filter(([id]) => BOARD_IDS.has(id))) as Record<string, Paths>,
             });
           }
         } catch { /* Start with a clean game when storage is corrupt. */ }
