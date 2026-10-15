@@ -5,8 +5,16 @@ import { boardErrors, toIndex, startPath, extendPath, isSolved, progress, sample
 const boards = JSON.parse(readFileSync(new URL('../src/boards.json', import.meta.url), 'utf8'));
 const small = {id:'test',width:2,height:2,difficulty:'easy',pairs:[[[0,0],[0,1]],[[1,0],[1,1]]]};
 test('all supplied boards have valid and non-overlapping endpoints', () => {
-  assert.deepEqual(boards.map(boardErrors), [[],[],[],[]]);
-  assert.deepEqual(boards.map(b=>b.pairs.length),[10,10,10,20]);
+  assert.equal(boards.length, 4);
+  assert.deepEqual(boards.map(boardErrors), boards.map(() => []));
+  assert.deepEqual(boards.map(b => b.pairs.length), [6, 6, 8, 8]);
+  assert.deepEqual(boards.map(b => b.id), [
+    'level_000031', 'level_000032', 'level_000033', 'level_000034',
+  ]);
+  assert.ok(boards.every(board => board.difficulty === 'unrated'));
+  // Exporter writes [x, y]; the app stores [row, column].
+  assert.deepEqual(boards[0].pairs[0], [[0, 2], [1, 0]]);
+  assert.deepEqual(boards[2].pairs[0], [[1, 0], [2, 8]]);
 });
 test('only orthogonally adjacent moves are allowed', () => {
   const p = startPath({},0,0);
