@@ -1,27 +1,29 @@
 # Numberlink — Expo app (single source of truth)
 
-This is the *only* implementation for the Numberlink player: iOS, Android and the deployed web app compile from `App.tsx`, `src/engine.ts` and `src/boards.json`.
+This is the **only maintained** implementation of Numberlink for web, iOS and Android. The shared game UI and rules live in `App.tsx`, `src/engine.ts` and `src/boards.json`.
 
-## Test locally
+## Local development
 
 - `npm install`
-- `npm test` (pure game engine / supplied boards)
-- `npm run typecheck`
-- `npm run web` (interactive browser dev server)
-- `npm start` (Expo Go for iPhone / Android)
-- `npm run export:web` (production static site under `/numberlink/`)
+- `npm test` — puzzle engine and supplied boards
+- `npm run typecheck` — React Native/TypeScript types
+- `npm run web` — interactive browser server
+- `npm start` — Expo Go on iOS or Android
+- `npm run export:web` — production export for `/numberlink/`
 
-## Deployment
+## Production deployment
 
-Changing this directory on GitHub `main` triggers `.github/workflows/numberlink-web.yml`.
-GitHub Actions installs packages, runs tests and typechecking, exports Expo Web and commits **only the compiled result** into `/numberlink/` in the existing Pages repository. GitHub Pages then deploys the site at https://liamkidney.github.io/numberlink/ . The existing root website is untouched.
+The repository workflow `.github/workflows/numberlink-web.yml` runs whenever files here change on `main`. It checks the rules and types, exports Expo Web, combines the web bundle with the existing website homepage and other root assets, and deploys the combined artifact via the official GitHub Pages deploy action.
 
-Importantly, a failed test/build never replaces the live site. The original self-contained HTML preview is intentionally *not* maintained independently.
+- Live game: https://liamkidney.github.io/numberlink/
+- No manually maintained standalone browser implementation; generated web assets come from Expo.
+- A failed build does not replace the live deployment.
+- No local machine is needed: GitHub Actions builds the website.
 
-## Web progress migration
+## Browser progress migration
 
-On its first launch, Expo Web imports saved progress from the older `numberlink-preview-v1` localStorage entry into AsyncStorage, if new-format progress does not yet exist. Existing board IDs are unchanged. Mobile and web do not yet share progress across devices.
+On first load, the Expo Web implementation reads any saved progress from the old standalone `numberlink-preview-v1` localStorage key before saving it to AsyncStorage; board IDs are unchanged. Progress does not yet sync across devices.
 
-## Prototype scope
+## Prototype limitations
 
-Four supplied boards; connect matching endpoints, orthogonal drag paths, backtrack/undo/reset, full-coverage completion validation, local saves and level navigation. Supplied boards are coordinate-validated but have not been independently solver-verified for existence or uniqueness. Purchases, cloud sync and native store releases are future phases.
+Four user-supplied boards; path-drawing, strict full-coverage completion validation, undo, reset, navigation and saved progress. Board endpoints are structurally validated but **solvability and uniqueness have not been independently proved**. Purchases, authentication, and store builds are later steps.
