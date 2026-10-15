@@ -1,0 +1,33 @@
+name: Numberlink pull-request checks
+
+on:
+  pull_request:
+    paths:
+      - 'apps/numberlink/**'
+      - '.github/workflows/numberlink-checks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install packages
+        working-directory: apps/numberlink
+        run: npm install --no-audit --no-fund
+      - name: Test puzzle engine
+        working-directory: apps/numberlink
+        run: npm test
+      - name: Type-check app
+        working-directory: apps/numberlink
+        run: npm run typecheck
+      - name: Build Expo web app
+        working-directory: apps/numberlink
+        run: npm run export:web
