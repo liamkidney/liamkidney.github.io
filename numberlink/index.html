@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><meta name="theme-color" content="#F7F5F0"/><title>Numberlink — Prototype</title>
+<style>
+:root{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#243041;background:#f7f5f0}
+*{box-sizing:border-box}body{margin:0;min-height:100vh}button{font:inherit;cursor:pointer}button:disabled{opacity:.3;cursor:not-allowed}
+.wrap{max-width:520px;margin:auto;padding:clamp(20px,4vw,32px) 18px 30px}
+.header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:25px}
+.overline{font-size:10px;letter-spacing:2.3px;font-weight:800;color:#9d805d}.title{font-size:clamp(25px,6vw,29px);font-weight:850;letter-spacing:-1.2px;line-height:1.16;margin-top:8px}.title b{color:#e49c50}.sub{font-size:12px;color:#748093;margin-top:7px}.stat{background:#ebe7de;border-radius:14px;text-align:center;padding:8px 12px;min-width:65px}.stat strong{font-size:24px}.stat span{font-size:12px;color:#87909c}.stat div:last-child{font-size:9px;letter-spacing:1px;font-weight:800;color:#7a8691}
+.lvlHead,.playHead,.progress{display:flex;align-items:center;justify-content:space-between}.lvlHead{margin-bottom:10px}.overline2{font-size:10px;font-weight:800;letter-spacing:1.2px;color:#858b90}.aside{font-size:11px;color:#748093}.levels{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:25px}.level{padding:10px 5px 9px;border:none;border-radius:13px;background:#ebe6de;color:#243041;min-height:61px}.level.active{background:#243041;color:white}.level strong{font-size:19px;display:block}.level small{font-size:9px;color:#7f8a94;font-weight:700;display:block;margin-top:4px}.level.active small{color:#dce6f0}
+.playHead{margin-bottom:15px}.sectiontitle{font-size:19px;font-weight:800;letter-spacing:-.5px;margin-top:5px}.diff{display:flex;gap:7px;align-items:center;background:#eeeae3;color:#6e7782;border-radius:30px;padding:8px 11px;font-size:10px;letter-spacing:1px;font-weight:800}.diff:before{content:'';width:7px;height:7px;border-radius:50%;background:#82a98c}.diff.hard:before{background:#d48161}
+.boardFrame{padding:5px;border-radius:16px;background:#e8e3da;box-shadow:0 6px 22px #363f4c12;margin:auto;width:100%;max-width:448px}.board{display:block;width:100%;height:auto;border-radius:11px;background:#fcfbf8;touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair}
+.progress{font-size:11px;font-weight:650;color:#7c838c;margin-top:15px;max-width:448px;margin-left:auto;margin-right:auto}.track{height:5px;border-radius:5px;background:#e5e1da;margin:9px auto 0;max-width:448px;overflow:hidden}.fill{height:100%;border-radius:5px;background:#a1b497;transition:width .16s ease}
+.help{text-align:center;color:#777e88;font-size:12px;line-height:1.55;max-width:370px;margin:18px auto 0}.solved{margin-top:16px;text-align:center;border-radius:13px;padding:15px;background:#e8f0e5;color:#3d7350}.solved strong{display:block;font-size:17px}.solved small{display:block;font-size:12px;color:#667d6c;margin:7px 0 12px}
+.controls{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-top:22px}.control{background:#eae6de;color:#435165;border:0;border-radius:9px;padding:12px 14px;font-size:11px;font-weight:750}.control.primary{background:#243041;color:#fff}.foot{text-align:center;color:#aaa5a0;font-size:9px;font-weight:750;letter-spacing:1px;margin-top:24px}
+</style></head><body>
+<div class="wrap">
+<header class="header"><div><div class="overline">NUMBERLINK</div><div class="title">Connect the dots<b>.</b></div><div class="sub">A quiet little puzzle for your mind.</div></div><div class="stat"><div><strong id="solvedCount">0</strong><span>/4</span></div><div>SOLVED</div></div></header>
+<div class="lvlHead"><span class="overline2">CHOOSE A LEVEL</span><span class="aside">4 puzzles</span></div>
+<div class="levels" id="levels"></div>
+<div class="playHead"><div><div class="overline2" id="levelLabel">LEVEL 01</div><div class="sectiontitle" id="levelTitle">Find your flow</div></div><span class="diff" id="difficulty">MEDIUM</span></div>
+<div class="boardFrame"><svg id="board" class="board" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Play Numberlink puzzle by dragging between matching numbered dots"></svg></div>
+<div class="progress"><span id="connected">0 / 10 pairs connected</span><span id="filled">0% filled</span></div><div class="track"><div class="fill" id="fillbar" style="width:0%"></div></div>
+<div id="message" class="help">Drag from a numbered dot to its matching partner. Fill every square without crossing paths.</div>
+<div class="controls"><button class="control" id="prev">← Previous</button><button class="control" id="undo">Undo line</button><button class="control" id="reset">Reset</button><button class="control" id="next">Next →</button></div>
+<div class="foot">PROTOTYPE 01 · PROGRESS SAVED IN THIS BROWSER</div>
+</div>
+<script>
+'use strict';
+const BOARDS = [{"id":"level_000001","width":8,"height":8,"difficulty":"medium","pairs":[[[1,3],[0,7]],[[0,6],[1,1]],[[0,1],[2,3]],[[2,4],[3,6]],[[3,5],[3,0]],[[4,0],[4,6]],[[4,7],[5,1]],[[5,0],[7,3]],[[7,4],[6,7]],[[6,6],[6,1]]]},{"id":"level_000002","width":8,"height":8,"difficulty":"medium","pairs":[[[0,0],[0,3]],[[0,4],[1,6]],[[1,5],[2,0]],[[2,1],[2,7]],[[3,7],[3,0]],[[4,0],[4,6]],[[4,7],[5,3]],[[6,3],[7,6]],[[7,5],[6,2]],[[5,2],[6,1]]]},{"id":"level_000003","width":8,"height":8,"difficulty":"medium","pairs":[[[2,0],[6,1]],[[5,1],[2,2]],[[3,2],[6,2]],[[7,2],[4,3]],[[3,3],[0,2]],[[0,3],[7,4]],[[7,5],[1,5]],[[0,5],[3,6]],[[4,6],[7,7]],[[6,7],[2,7]]]},{"id":"level_000004","width":10,"height":10,"difficulty":"hard","pairs":[[[3,1],[6,1]],[[7,1],[8,0]],[[7,0],[5,0]],[[4,0],[1,1]],[[1,0],[2,2]],[[3,2],[8,2]],[[9,2],[7,3]],[[6,3],[3,3]],[[2,3],[1,4]],[[2,4],[6,4]],[[7,4],[9,5]],[[8,5],[2,5]],[[1,5],[0,6]],[[1,6],[6,6]],[[7,6],[6,7]],[[5,7],[8,8]],[[9,8],[6,9]],[[5,9],[4,7]],[[3,7],[1,8]],[[1,9],[2,7]]]}];
+const COLORS=['#df635e','#357fb5','#de9a29','#8b65b4','#33977c','#df6f9d','#6b8e2e','#ba7550','#4c62b5','#9b6671','#1e9baf','#ac743a','#7665bc','#62a067','#b45486','#507d7c','#b58e36','#ae5671','#737cbb','#93814a'];
+const KEY='numberlink-preview-v1';
+let saved={selected:0,completed:[],pathsById:{}};let edited=null,drag=null;
+try{const old=JSON.parse(localStorage.getItem(KEY));if(old&&Array.isArray(old.completed)&&old.pathsById&&Number.isInteger(old.selected))saved={...saved,...old};}catch{}
+saved.selected=Math.max(0,Math.min(BOARDS.length-1,saved.selected));
+const byId=id=>document.getElementById(id);
+const boardEl=byId('board');
+const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(saved));}catch{}};
+const board=()=>BOARDS[saved.selected];
+const currentPaths=()=>saved.pathsById[board().id]||{};
+const idx=(p,b=board())=>p[0]*b.width+p[1];
+const owner=(cell,b=board())=>{for(let i=0;i<b.pairs.length;i++)if(b.pairs[i].some(p=>idx(p,b)===cell))return i;return null;};
+const adjacent=(a,b,brd=board())=>Math.abs(Math.floor(a/brd.width)-Math.floor(b/brd.width))+Math.abs(a%brd.width-b%brd.width)===1;
+const endpoints=(pair,b=board())=>b.pairs[pair].map(p=>idx(p,b));
+function connected(pair,paths=currentPaths(),b=board()){
+ const line=paths[pair];if(!line||line.length<2||new Set(line).size!==line.length)return false;
+ const [a,z]=endpoints(pair,b);
+ if(!((line[0]===a&&line.at(-1)===z)||(line[0]===z&&line.at(-1)===a)))return false;
+ return line.every((v,j)=>j===0||adjacent(v,line[j-1],b));
+}
+function solved(paths=currentPaths(),b=board()){
+ if(!b.pairs.every((_,i)=>connected(i,paths,b)))return false;
+ const used=new Set();
+ for(const [key,line] of Object.entries(paths)){
+  if(!Number.isInteger(+key)||+key<0||+key>=b.pairs.length)return false;
+  for(const pos of line){if(!Number.isInteger(pos)||pos<0||pos>=b.width*b.height||used.has(pos))return false;const p=owner(pos,b);if(p!==null&&p!==+key)return false;used.add(pos);}
+ }
+ return used.size===b.width*b.height;
+}
+function extend(paths,pair,next){
+ const line=paths[pair];if(!line?.length||!Number.isInteger(next)||!adjacent(line.at(-1),next))return paths;
+ const currentIndex=line.indexOf(next);
+ if(currentIndex>=0)return {...paths,[pair]:line.slice(0,currentIndex+1)};
+ const [a,z]=endpoints(pair);if(line.at(-1)===(line[0]===a?z:a))return paths;
+ if(Object.entries(paths).some(([k,l])=>+k!==pair&&l.includes(next)))return paths;
+ const own=owner(next);if(own!==null&&own!==pair)return paths;
+ return {...paths,[pair]:[...line,next]};
+}
+function update(paths,pair){saved.pathsById[board().id]=paths;edited=pair;if(solved(paths)&&!saved.completed.includes(board().id))saved.completed.push(board().id);persist();render();}
+function center(index,b){return[(index%b.width+.5)*100,(Math.floor(index/b.width)+.5)*100];}
+function renderSvg(){
+ const b=board(),p=currentPaths(),w=b.width*100,h=b.height*100;
+ boardEl.setAttribute('viewBox',`0 0 ${w} ${h}`);boardEl.setAttribute('aria-label',`Level ${saved.selected+1}: ${b.width} by ${b.height} Numberlink puzzle`);
+ let s=`<rect x="0" y="0" width="${w}" height="${h}" fill="#fcfbf8"/>`;
+ for(let c=1;c<b.width;c++)s+=`<line x1="${c*100}" y1="0" x2="${c*100}" y2="${h}" stroke="#e9e6df" stroke-width="2"/>`;
+ for(let r=1;r<b.height;r++)s+=`<line x1="0" y1="${r*100}" x2="${w}" y2="${r*100}" stroke="#e9e6df" stroke-width="2"/>`;
+ for(const [key,path] of Object.entries(p))if(path.length){const d=path.map((pt,i)=>{const [x,y]=center(pt,b);return `${i?'L':'M'}${x} ${y}`}).join(' ');s+=`<path d="${d}" fill="none" stroke="${COLORS[+key%COLORS.length]}" stroke-width="47" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`;}
+ b.pairs.forEach((pair,i)=>{pair.forEach(ep=>{const [x,y]=center(idx(ep,b),b);s+=`<circle cx="${x}" cy="${y}" r="38" fill="#fcfbf8"/><circle cx="${x}" cy="${y}" r="35" fill="${COLORS[i%COLORS.length]}"/><text x="${x}" y="${y+11}" fill="white" font-size="34" font-weight="750" font-family="system-ui,sans-serif" text-anchor="middle">${i+1}</text>`;});});
+ boardEl.innerHTML=s;
+}
+function render(){const b=board(),p=currentPaths();
+ byId('levels').innerHTML=BOARDS.map((x,i)=>`<button class="level ${i===saved.selected?'active':''}" data-level="${i}"><strong>${String(i+1).padStart(2,'0')}</strong><small>${saved.completed.includes(x.id)?'✓ DONE':`${x.width} × ${x.height}`}</small></button>`).join('');
+ byId('solvedCount').textContent=saved.completed.length;
+ byId('levelLabel').textContent=`LEVEL ${String(saved.selected+1).padStart(2,'0')}`;
+ byId('levelTitle').textContent=b.difficulty==='hard'?'A bigger challenge':'Find your flow';
+ byId('difficulty').textContent=b.difficulty.toUpperCase();byId('difficulty').className='diff '+(b.difficulty==='hard'?'hard':'');
+ const count=b.pairs.filter((_,i)=>connected(i,p,b)).length,fill=new Set(Object.values(p).flat()).size,pct=Math.round(fill/(b.width*b.height)*100);
+ byId('connected').textContent=`${count} / ${b.pairs.length} pairs connected`;
+ byId('filled').textContent=`${pct}% filled`;byId('fillbar').style.width=pct+'%';
+ const success=solved(p,b);
+ byId('message').className=success?'solved':'help';
+ byId('message').innerHTML=success?`<strong>✦ Beautifully solved!</strong><small>Every pair connected. Every square filled.</small>${saved.selected<BOARDS.length-1?'<button id="victoryNext" class="control primary">Next level →</button>':''}`:'Drag from a numbered dot to its matching partner. Fill every square without crossing paths.';
+ byId('prev').disabled=saved.selected===0;byId('next').disabled=saved.selected===BOARDS.length-1;byId('undo').disabled=edited===null;
+ renderSvg();
+}
+function choose(i){if(i<0||i>=BOARDS.length)return;drag=null;edited=null;saved.selected=i;persist();render();}
+function getXY(event){const box=boardEl.getBoundingClientRect(),b=board();return [(event.clientX-box.left)/box.width*b.width*100,(event.clientY-box.top)/box.height*b.height*100];}
+function atXY([x,y]){const b=board(),col=Math.floor(x/100),row=Math.floor(y/100);return col>=0&&col<b.width&&row>=0&&row<b.height?row*b.width+col:null;}
+boardEl.addEventListener('pointerdown',event=>{if(event.button!==undefined&&event.button!==0)return;const xy=getXY(event),cell=atXY(xy);if(cell===null)return;const pair=owner(cell);if(pair===null)return;event.preventDefault();boardEl.setPointerCapture(event.pointerId);drag={pair,xy};update({...currentPaths(),[pair]:[cell]},pair);});
+boardEl.addEventListener('pointermove',event=>{if(!drag)return;event.preventDefault();const current=getXY(event),dist=Math.hypot(current[0]-drag.xy[0],current[1]-drag.xy[1]),steps=Math.max(1,Math.ceil(dist/28));let p=currentPaths(),original=p;
+ for(let i=1;i<=steps;i++){const x=drag.xy[0]+(current[0]-drag.xy[0])*i/steps,y=drag.xy[1]+(current[1]-drag.xy[1])*i/steps,cell=atXY([x,y]);if(cell!==null)p=extend(p,drag.pair,cell);}
+ drag.xy=current;if(p!==original)update(p,drag.pair);
+});
+const release=()=>drag=null;
+boardEl.addEventListener('pointerup',release);boardEl.addEventListener('pointercancel',release);
+byId('levels').addEventListener('click',event=>{const btn=event.target.closest('[data-level]');if(btn)choose(+btn.dataset.level)});
+byId('message').addEventListener('click',event=>{if(event.target.id==='victoryNext')choose(saved.selected+1)});
+byId('prev').onclick=()=>choose(saved.selected-1);byId('next').onclick=()=>choose(saved.selected+1);
+byId('reset').onclick=()=>{saved.pathsById[board().id]={};edited=null;persist();render()};
+byId('undo').onclick=()=>{if(edited===null)return;const paths={...currentPaths()};delete paths[edited];saved.pathsById[board().id]=paths;edited=null;persist();render()};
+render();
+</script></body></html>
