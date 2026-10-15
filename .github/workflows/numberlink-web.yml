@@ -1,0 +1,51 @@
+name: Numberlink web build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/numberlink/**'
+      - '.github/workflows/numberlink-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: numberlink-web
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install packages
+        working-directory: apps/numberlink
+        run: npm install --no-audit --no-fund
+      - name: Test puzzle engine
+        working-directory: apps/numberlink
+        run: npm test
+      - name: Type-check app
+        working-directory: apps/numberlink
+        run: npm run typecheck
+      - name: Build website from Expo source
+        working-directory: apps/numberlink
+        run: npm run export:web
+      - name: Verify output
+        run: |
+          test -s apps/numberlink/dist/index.html
+          test -s apps/numberlink/dist/manifest.webmanifest
+          grep -q '/numberlink/' apps/numberlink/dist/index.html
+      - name: Upload production web bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: numberlink-web
+          path: apps/numberlink/dist/
+          if-no-files-found: error
+          retention-days: 14

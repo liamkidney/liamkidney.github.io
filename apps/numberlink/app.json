@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Numberlink",
+    "slug": "numberlink",
+    "scheme": "numberlink",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F7F5F0",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.liamkidney.numberlink"
+    },
+    "android": {
+      "edgeToEdgeEnabled": true,
+      "package": "com.liamkidney.numberlink"
+    },
+    "web": {
+      "bundler": "metro",
+      "name": "Numberlink"
+    },
+    "experiments": {
+      "baseUrl": "/numberlink"
+    }
+  }
+}
