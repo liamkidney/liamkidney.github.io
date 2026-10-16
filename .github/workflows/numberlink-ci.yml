@@ -1,0 +1,34 @@
+name: Numberlink pull request checks
+on:
+  pull_request:
+    paths:
+      - 'apps/numberlink/**'
+      - '.github/workflows/numberlink-ci.yml'
+  push:
+    branches:
+      - feature/numberlink-daily-clover
+    paths:
+      - 'apps/numberlink/**'
+      - '.github/workflows/numberlink-ci.yml'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        working-directory: apps/numberlink
+        run: npm install --no-audit --no-fund
+      - name: Test puzzle and Clover rules
+        working-directory: apps/numberlink
+        run: npm test
+      - name: Type-check
+        working-directory: apps/numberlink
+        run: npm run typecheck
+      - name: Build web app
+        working-directory: apps/numberlink
+        run: npm run export:web

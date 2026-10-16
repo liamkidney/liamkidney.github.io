@@ -1,15 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList, Modal, PanResponder, Platform, Pressable, SafeAreaView,
-  ScrollView, StatusBar, StyleSheet, Text, TextInput, View, useWindowDimensions,
+  ScrollView, Share, StatusBar, StyleSheet, Text, TextInput, View, useWindowDimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Circle, Line, Path as SvgPath, Rect, Text as SvgText } from 'react-native-svg';
 import rawBoards from './src/boards.json';
+import rawClover from './src/clover.json';
+import type { CloverChallenge, CloverScore } from './src/clover';
+import { activeCloverCell, applyConnectedPair, cloverResultText, emptyCloverScore } from './src/clover';
 import type { Board, Paths } from './src/engine';
 import { advancePath, beginPath, endpoints, isPairConnected, isSolved, progress, sampledCells, toCell } from './src/engine';
 
 const BOARDS = rawBoards as unknown as Board[];
+const CLOVER = rawClover as unknown as CloverChallenge;
+const CLOVER_SAVE_KEY = 'numberlink:clover-preview:v1';
+const CLOVER_URL = 'https://liamkidney.github.io/numberlink/?mode=clover';
 const BOARD_IDS = new Set(BOARDS.map(board => board.id));
 const SAVE_KEY = 'numberlink:prototype:v1';
 // Browser-only storage key used by the first standalone HTML preview.
@@ -37,12 +43,13 @@ function touchPoint(event: any): [number, number] {
 }
 
 function PuzzleCanvas({
-  board, paths, size, onChange,
+  board, paths, size, onChange, cloverCell = null,
 }: {
   board: Board;
   paths: Paths;
   size: number;
   onChange: (next: Paths, pair: number) => void;
+  cloverCell?: number | null;
 }) {
   const cellSize = size / board.width;
   const height = cellSize * board.height;
@@ -126,6 +133,23 @@ function PuzzleCanvas({
             return <Circle key={`tip-${key}`} cx={(col + .5) * cellSize} cy={(row + .5) * cellSize}
               r={cellSize * .19} fill={PALETTE[pair % PALETTE.length]} stroke="#FFFFFF" strokeWidth={cellSize * .065} />;
           })}
+          {cloverCell !== null && (() => {
+            const [row, col] = toCell(board, cloverCell);
+            const x = (col + .5) * cellSize;
+            const y = (row + .5) * cellSize;
+            const d = cellSize * .145;
+            const r = cellSize * .145;
+            return (
+              <React.Fragment key={cloverCell}>
+                <Circle cx={x} cy={y} r={cellSize * .36} fill="#FCFBF8" opacity={.86} />
+                {[-1, 1].flatMap(dx => [-1, 1].map(dy => (
+                  <Circle key={`${dx},${dy}`} cx={x + dx * d} cy={y + dy * d}
+                    r={r} fill="#47916B" stroke="#F9FBF7" strokeWidth={cellSize * .025} />
+                )))}
+                <Circle cx={x} cy={y} r={cellSize * .065} fill="#2E7450" />
+              </React.Fragment>
+            );
+          })()}
           {points.flatMap(([a, b], pair) => [a, b].map((index, endpoint) => {
             const [row, col] = toCell(board, index);
             const cx = (col + .5) * cellSize;
@@ -159,8 +183,181 @@ function SmallButton({ label, action, disabled = false, important = false }: { l
   );
 }
 
+
+type CloverResult = { collected: number; elapsedMs: number; practice: boolean };
+type CloverRun = {
+  paths: Paths;
+  score: CloverScore;
+  startedAt: number | null;
+  elapsedMs: number | null;
+  practice: boolean;
+  firstResult?: CloverResult;
+  lastResult?: CloverResult;
+};
+const newCloverRun = (firstResult?: CloverResult): CloverRun => ({
+  paths: {}, score: emptyCloverScore(), startedAt: null, elapsedMs: null,
+  practice: Boolean(firstResult), firstResult,
+});
+function formatDuration(ms: number): string {
+  const total = Math.floor(ms / 1000);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+function CloverPanel({ size }: { size: number }) {
+  const [run, setRun] = useState<CloverRun>(() => newCloverRun());
+  const [hydrated, setHydrated] = useState(false);
+  const [clock, setClock] = useState(Date.now());
+  const [lastEdited, setLastEdited] = useState<number | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    AsyncStorage.getItem(CLOVER_SAVE_KEY)
+      .then(value => {
+        if (!live || !value) return;
+        try {
+          const parsed = JSON.parse(value) as CloverRun;
+          if (parsed && parsed.score && parsed.paths &&
+              Array.isArray(parsed.score.completed) &&
+              typeof parsed.score.next === 'number' &&
+              typeof parsed.score.collected === 'number') setRun(parsed);
+        } catch { /* Invalid saved preview starts afresh. */ }
+      })
+      .catch(() => {})
+      .finally(() => { if (live) setHydrated(true); });
+    return () => { live = false; };
+  }, []);
+
+  useEffect(() => {
+    if (hydrated) AsyncStorage.setItem(CLOVER_SAVE_KEY, JSON.stringify(run)).catch(() => {});
+  }, [run, hydrated]);
+  useEffect(() => {
+    if (run.startedAt === null || run.elapsedMs !== null) return;
+    const timer = setInterval(() => setClock(Date.now()), 250);
+    return () => clearInterval(timer);
+  }, [run.startedAt, run.elapsedMs]);
+
+  const change = (paths: Paths, pair: number) => {
+    if (!hydrated) return;
+    setLastEdited(pair);
+    setRun(previous => {
+      if (previous.elapsedMs !== null) return previous;
+      const startedAt = previous.startedAt ?? Date.now();
+      const score = applyConnectedPair(CLOVER, previous.score, paths, pair);
+      const finished = isSolved(CLOVER.board, paths);
+      if (!finished) return { ...previous, paths, score, startedAt };
+      const elapsedMs = Math.max(0, Date.now() - startedAt);
+      const result: CloverResult = { collected: score.collected, elapsedMs, practice: previous.practice };
+      return {
+        ...previous, paths, score, startedAt, elapsedMs,
+        lastResult: result, firstResult: previous.firstResult ?? result,
+      };
+    });
+  };
+
+  const reset = () => {
+    setLastEdited(null);
+    // Reset only the drawn lines; already attempted colours and elapsed time
+    // are deliberately retained to prevent collecting the same clover again.
+    setRun(previous => previous.elapsedMs !== null
+      ? newCloverRun(previous.firstResult)
+      : { ...previous, paths: {} });
+  };
+  const undo = () => {
+    if (lastEdited === null || run.elapsedMs !== null) return;
+    setRun(previous => {
+      const paths = { ...previous.paths };
+      delete paths[lastEdited];
+      return { ...previous, paths };
+    });
+    setLastEdited(null);
+  };
+  const share = async () => {
+    // Only the original completed attempt is shared for a fair comparison.
+    const result = run.firstResult;
+    if (!result) return;
+    const message = cloverResultText(CLOVER, result.collected, result.elapsedMs, CLOVER_URL);
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
+        if (typeof navigator.share === 'function') await navigator.share({ text: message });
+        else if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(message);
+        else await Share.share({ message });
+      } else await Share.share({ message });
+    } catch { /* Share-sheet cancellation is not an error. */ }
+  };
+  const board = CLOVER.board;
+  const stats = progress(board, run.paths);
+  const target = activeCloverCell(CLOVER, run.score);
+  const elapsedMs = run.elapsedMs ?? (run.startedAt === null ? 0 : Math.max(0, clock - run.startedAt));
+  const result = run.lastResult;
+  return (
+    <View style={styles.cloverPanel}>
+      <View style={styles.playHeader}>
+        <View>
+          <Text style={styles.sectionLabel}>DAILY CLOVER · PLAYABLE PREVIEW #1</Text>
+          <Text style={styles.levelTitle}>Think ahead. Collect all eight.</Text>
+        </View>
+        <Text style={styles.cloverSymbol}>☘</Text>
+      </View>
+      <Text style={styles.cloverInstructions}>
+        Each clover lies on one colour's path. Work out which line crosses it,
+        then complete that line to claim the clover and reveal the next.
+        Lines completed too early miss their later clovers.
+      </Text>
+      <View style={styles.boardContainer}>
+        {hydrated
+          ? <PuzzleCanvas key={board.id} board={board} paths={run.paths} size={size}
+              onChange={change} cloverCell={target} />
+          : <Text style={styles.instruction}>Loading saved challenge…</Text>}
+      </View>
+      <View style={styles.cloverStats}>
+        <View>
+          <Text style={styles.sectionLabel}>CLOVERS</Text>
+          <Text style={styles.cloverStatValue}>☘ {run.score.collected} / {CLOVER.clovers.length}</Text>
+        </View>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={styles.sectionLabel}>PAIRS</Text>
+          <Text style={styles.cloverStatValue}>{stats.connected} / {stats.totalPairs}</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={styles.sectionLabel}>TIME</Text>
+          <Text style={styles.cloverStatValue}>{formatDuration(elapsedMs)}</Text>
+        </View>
+      </View>
+      {result ? (
+        <View style={styles.successCard}>
+          <Text style={styles.successTitle}>{result.collected === CLOVER.clovers.length ? '☘ Perfect collection!' : '☘ Puzzle complete!'}</Text>
+          <Text style={styles.successSubtitle}>
+            {result.collected} of {CLOVER.clovers.length} clovers · {formatDuration(result.elapsedMs)}
+            {result.practice ? ' · Practice run' : ' · First attempt'}
+          </Text>
+          <SmallButton label={result.practice ? "Share first result ↗" : "Share result ↗"} important action={share} />
+          <SmallButton label="Try again (practice)" action={reset} />
+        </View>
+      ) : (
+        <Text style={styles.instruction}>
+          {run.practice ? 'Practice run · Your first completed result is saved.' :
+            'Your first completed attempt is saved for sharing. Undo and reset cannot recapture a missed clover.'}
+        </Text>
+      )}
+      {!result && (
+        <View style={styles.controls}>
+          <SmallButton label="Undo line" disabled={lastEdited === null} action={undo} />
+          <SmallButton label="Reset lines" action={reset} />
+        </View>
+      )}
+      {!result && run.firstResult && <SmallButton label="Share first result" action={share} />}
+      <Text style={styles.cloverNote}>One fixed preview board for now · Daily rotation and streaks come later.</Text>
+    </View>
+  );
+}
+
 export default function App() {
   const { width } = useWindowDimensions();
+  const [mode, setMode] = useState<'clover' | 'classic'>(() => {
+    if (Platform.OS !== 'web') return 'clover';
+    try { return new URLSearchParams(globalThis.location?.search ?? '').get('mode') === 'classic' ? 'classic' : 'clover'; }
+    catch { return 'clover'; }
+  });
   const [saved, setSaved] = useState<Saved>(EMPTY);
   const [hydrated, setHydrated] = useState(false);
   const [lastEdited, setLastEdited] = useState<number | null>(null);
@@ -258,6 +455,17 @@ export default function App() {
           </View>
         </View>
 
+        <View style={styles.modeSwitch}>
+          <Pressable accessibilityRole="button" accessibilityState={{ selected: mode === 'clover' }}
+            onPress={() => setMode('clover')} style={[styles.modeButton, mode === 'clover' && styles.modeSelected]}>
+            <Text style={[styles.modeText, mode === 'clover' && styles.modeSelectedText]}>☘ Daily Clover</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityState={{ selected: mode === 'classic' }}
+            onPress={() => setMode('classic')} style={[styles.modeButton, mode === 'classic' && styles.modeSelected]}>
+            <Text style={[styles.modeText, mode === 'classic' && styles.modeSelectedText]}>Classic levels</Text>
+          </Pressable>
+        </View>
+        {mode === 'clover' ? <CloverPanel size={boardSize - 10} /> : <>
         <View style={styles.levelsHeader}>
           <Text style={styles.sectionLabel}>CHOOSE A LEVEL</Text>
           <Text style={styles.sectionValue}>{BOARDS.length} puzzles</Text>
@@ -310,6 +518,7 @@ export default function App() {
           <SmallButton label="Reset" action={resetBoard} />
           <SmallButton label="Next →" disabled={level === BOARDS.length - 1} action={() => chooseLevel(level + 1)} />
         </View>
+        </>}
         <Text style={styles.footer}>PROTOTYPE 01  ·  ALL PROGRESS SAVED ON THIS DEVICE</Text>
       </ScrollView>
       <Modal visible={levelPickerOpen} animationType="slide" onRequestClose={() => setLevelPickerOpen(false)}>
@@ -396,6 +605,17 @@ const styles = StyleSheet.create({
   smallButton: { backgroundColor: '#EAE6DD', borderRadius: 9, paddingHorizontal: 13, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
   importantButton: { backgroundColor: INK },
   smallButtonText: { color: '#405064', fontWeight: '700', fontSize: 11 },
+  modeSwitch: { flexDirection: 'row', width: '100%', maxWidth: 480, backgroundColor: '#EBE7DE', borderRadius: 12, padding: 4, marginBottom: 22 },
+  modeButton: { flex: 1, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', borderRadius: 10 },
+  modeSelected: { backgroundColor: '#FFFFFF' },
+  modeText: { color: MUTED, fontWeight: '700', fontSize: 13 },
+  modeSelectedText: { color: INK },
+  cloverPanel: { width: '100%', maxWidth: 480, alignItems: 'center' },
+  cloverSymbol: { fontSize: 29, color: '#47916B' },
+  cloverInstructions: { color: '#717A82', fontSize: 12, lineHeight: 19, alignSelf: 'stretch', marginBottom: 16 },
+  cloverStats: { width: '100%', maxWidth: 450, flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 8 },
+  cloverStatValue: { color: INK, fontSize: 19, fontWeight: '800', marginTop: 5 },
+  cloverNote: { color: MUTED, textAlign: 'center', fontSize: 11, marginTop: 16 },
   footer: { color: '#A8A4A0', fontSize: 9, letterSpacing: 1.0, fontWeight: '700', marginTop: 25, textAlign: 'center' },
   currentLevel: { width: '100%', maxWidth: 480, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#EFEBE4', borderRadius: 13, paddingHorizontal: 16, paddingVertical: 14, marginBottom: 25 },
   currentLevelTitle: { color: INK, fontSize: 17, fontWeight: '800' },
