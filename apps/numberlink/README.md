@@ -28,6 +28,16 @@ On first load, the Expo Web implementation reads any saved progress from the old
 
 Four current iteration-5 boards (levels 000031–000034) generated offline and previously checked for full-grid uniqueness and no premature completion; path-drawing, strict full-coverage validation, undo, reset, level navigation and saved progress. The app contains no in-browser SMT solver; verification is performed before importing boards.
 
+## Daily Clover preview
+
+- Open the **☘ Daily Clover** tab or use `https://liamkidney.github.io/numberlink/?mode=clover`.
+- The prototype contains **one fixed 8×8 challenge** with eight pairs and eight sequential clovers. It is not yet date-rotated.
+- Work out which complete coloured line crosses the current clover. Completing a line claims the clover only if its target is active. Otherwise it may cause a later clover to be missed when revealed.
+- The scoring engine records each pair's **first completion**; redrawing or resetting paths cannot generate extra clovers. A first completed result is saved on the device; subsequent restarts are marked as practice.
+- The timer begins on first touch and ends on valid full-board completion. The native/web sharing action shares clover count, time and a deep link without revealing the solution.
+- Daily rotation, archives, genuine first-start enforcement across reloads, multi-device sync, streaks and server-verified leaderboards are **future work**. This is for assessing the mechanic and touch interaction.
+- Clover content is stored in `src/clover.json`; scoring and validation in `src/clover.ts`, with targeted tests in `tests/clover.test.mjs`. The included solution has been checked for no alternate full-cover solution with an offline binary integer-programming model.
+
 ## Level library
 
 - New boards are stored in `src/boards.json`, an array of `{ id, width, height, difficulty, pairs }`.
