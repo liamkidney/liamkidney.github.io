@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Circle, Line, Path as SvgPath, Rect, Text as SvgText } from 'react-native-svg';
 import rawBoards from './src/boards.json';
 import type { Board, Paths } from './src/engine';
-import { endpointPair, endpoints, extendPath, isSolved, progress, sampledCells, startPath, toCell } from './src/engine';
+import { advancePath, beginPath, endpoints, isPairConnected, isSolved, progress, sampledCells, toCell } from './src/engine';
 
 const BOARDS = rawBoards as unknown as Board[];
 const BOARD_IDS = new Set(BOARDS.map(board => board.id));
@@ -64,12 +64,13 @@ function PuzzleCanvas({
       const row = Math.floor(p[1] / (s / b.width));
       if (row < 0 || row >= b.height || col < 0 || col >= b.width) return;
       const index = row * b.width + col;
-      const pair = endpointPair(b, index);
-      if (pair === null) { activeRef.current = null; return; }
-      const next = startPath(pathsRef.current, pair, index);
-      pathsRef.current = next;
-      activeRef.current = { pair, previous: p };
-      change(next, pair);
+      const begun = beginPath(b, pathsRef.current, index);
+      if (!begun) { activeRef.current = null; return; }
+      activeRef.current = { pair: begun.pair, previous: p };
+      if (begun.paths !== pathsRef.current) {
+        pathsRef.current = begun.paths;
+        change(begun.paths, begun.pair);
+      }
     },
     onPanResponderMove: (event) => {
       const active = activeRef.current;
@@ -78,7 +79,7 @@ function PuzzleCanvas({
       const current = touchPoint(event);
       let updated = pathsRef.current;
       for (const index of sampledCells(b, s, active.previous, current)) {
-        updated = extendPath(b, updated, active.pair, index);
+        updated = advancePath(b, updated, active.pair, index);
       }
       active.previous = current;
       if (updated !== pathsRef.current) {
@@ -115,6 +116,15 @@ function PuzzleCanvas({
               <SvgPath key={key} d={d} fill="none" stroke={PALETTE[pair % PALETTE.length]}
                 strokeWidth={pathStroke} strokeLinecap="round" strokeLinejoin="round" opacity={0.90} />
             );
+          })}
+          {Object.entries(paths).map(([key, sequence]) => {
+            const pair = Number(key);
+            if (!sequence?.length || isPairConnected(board, paths, pair)) return null;
+            const tip = sequence[sequence.length - 1];
+            if (sequence.length < 2 || points[pair]?.includes(tip)) return null;
+            const [row, col] = toCell(board, tip);
+            return <Circle key={`tip-${key}`} cx={(col + .5) * cellSize} cy={(row + .5) * cellSize}
+              r={cellSize * .19} fill={PALETTE[pair % PALETTE.length]} stroke="#FFFFFF" strokeWidth={cellSize * .065} />;
           })}
           {points.flatMap(([a, b], pair) => [a, b].map((index, endpoint) => {
             const [row, col] = toCell(board, index);
@@ -291,7 +301,7 @@ export default function App() {
             {level < BOARDS.length - 1 && <SmallButton label="Next level →" important action={() => chooseLevel(level + 1)} />}
           </View>
         ) : (
-          <Text style={styles.instruction}>Drag from a numbered dot to its matching partner. Fill every square without crossing paths.</Text>
+          <Text style={styles.instruction}>Drag between matching dots. Lift your finger and resume from a loose end, or drag from any segment to change direction. Fill every square.</Text>
         )}
 
         <View style={styles.controls}>
