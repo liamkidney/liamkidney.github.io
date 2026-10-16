@@ -1,6 +1,6 @@
 /** Pure, first-completion-only scoring for the Clover Challenge. */
-import { boardErrors, endpoints, isPairConnected, toIndex } from './engine';
-import type { Board, Cell, Paths } from './engine';
+import { boardErrors, endpoints, isPairConnected, toIndex } from './engine.ts';
+import type { Board, Cell, Paths } from './engine.ts';
 
 export type CloverChallenge = {
   id: string;
