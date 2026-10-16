@@ -61,6 +61,37 @@ export function startPath(paths: Paths, pair: number, start: number): Paths {
 }
 
 /**
+ * Start a drag from either numbered endpoint OR any cell of an existing line.
+ * The unconnected tip resumes without clearing the line. Touching an earlier
+ * segment trims the tail so that segment can be redirected; either endpoint
+ * can still be used to redraw a path from scratch.
+ */
+export function beginPath(board: Board, paths: Paths, cell: number): { pair: number; paths: Paths } | null {
+  if (!Number.isInteger(cell) || cell < 0 || cell >= board.width * board.height) return null;
+
+  let pair = endpointPair(board, cell);
+  if (pair === null) {
+    const entry = Object.entries(paths).find(([, path]) => path?.includes(cell));
+    if (!entry) return null;
+    pair = Number(entry[0]);
+  }
+
+  const path = paths[pair];
+  if (!path?.length) return { pair, paths: startPath(paths, pair, cell) };
+
+  const position = path.indexOf(cell);
+  if (position < 0 || position === 0 ||
+    (position === path.length - 1 && isPairConnected(board, paths, pair))) {
+    // Starting from the original endpoint (or the other end of a completed
+    // line) means redrawing. A different, unused endpoint also starts anew.
+    return { pair, paths: startPath(paths, pair, cell) };
+  }
+
+  if (position === path.length - 1) return { pair, paths }; // Resume a loose end.
+  return { pair, paths: { ...paths, [pair]: path.slice(0, position + 1) } };
+}
+
+/**
  * One orthogonal step only. Visiting your own path backtracks. Other paths and
  * endpoints are impassable; a completed path ends at the other endpoint.
  */
@@ -70,7 +101,10 @@ export function extendPath(board: Board, paths: Paths, pair: number, next: numbe
   const last = path[path.length - 1];
   if (last === next || !adjacent(board, last, next)) return paths;
   const ownIndex = path.indexOf(next);
-  if (ownIndex >= 0) return { ...paths, [pair]: path.slice(0, ownIndex + 1) };
+  // Retract one step at a time. Crossing an older part of your line should
+  // not unexpectedly erase a large section while your finger is moving.
+  if (ownIndex >= 0) return ownIndex === path.length - 2
+    ? { ...paths, [pair]: path.slice(0, -1) } : paths;
   const [a, b] = endpoints(board)[pair];
   if (last === (path[0] === a ? b : a)) return paths; // Can't continue beyond the destination
   const occupied = Object.entries(paths).some(([p, occupiedPath]) => Number(p) !== pair && occupiedPath.includes(next));
@@ -79,6 +113,31 @@ export function extendPath(board: Board, paths: Paths, pair: number, next: numbe
   if (otherEndpoint !== null && otherEndpoint !== pair) return paths;
   // The only own endpoint not yet in the line is the destination.
   return { ...paths, [pair]: [...path, next] };
+}
+
+/**
+ * Follow a finger across a grid corner. Touch sampling can jump diagonally
+ * from one cell to the next even when the physical drag is smooth; route the
+ * corner as two legal orthogonal moves, without crossing occupied cells.
+ */
+export function advancePath(board: Board, paths: Paths, pair: number, next: number): Paths {
+  const direct = extendPath(board, paths, pair, next);
+  if (direct !== paths) return direct;
+
+  const path = paths[pair];
+  if (!path?.length || !Number.isInteger(next) || next < 0 || next >= board.width * board.height) return paths;
+  const [row, col] = toCell(board, path[path.length - 1]);
+  const [nextRow, nextCol] = toCell(board, next);
+  if (Math.abs(row - nextRow) !== 1 || Math.abs(col - nextCol) !== 1) return paths;
+
+  const corners = [row * board.width + nextCol, nextRow * board.width + col];
+  for (const via of corners) {
+    const first = extendPath(board, paths, pair, via);
+    if (first === paths) continue;
+    const second = extendPath(board, first, pair, next);
+    if (second !== first && second[pair]?.at(-1) === next) return second;
+  }
+  return paths;
 }
 
 export function isPairConnected(board: Board, paths: Paths, pair: number): boolean {

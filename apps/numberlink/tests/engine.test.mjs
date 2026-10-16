@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { boardErrors, toIndex, startPath, extendPath, isSolved, progress, sampledCells } from '../src/engine.ts';
+import { advancePath, beginPath, boardErrors, toIndex, startPath, extendPath, isSolved, progress, sampledCells } from '../src/engine.ts';
 const boards = JSON.parse(readFileSync(new URL('../src/boards.json', import.meta.url), 'utf8'));
 const small = {id:'test',width:2,height:2,difficulty:'easy',pairs:[[[0,0],[0,1]],[[1,0],[1,1]]]};
 test('all supplied boards have valid and non-overlapping endpoints', () => {
@@ -42,4 +42,52 @@ test('complete board requires every cell, valid pairs, and no overlap', () => {
 test('pointer interpolation covers fast horizontal drags',()=>{
   const board={id:'t',width:4,height:4,difficulty:'easy',pairs:[[[0,0],[0,3]]]};
   assert.deepEqual(sampledCells(board,160,[20,20],[140,20]),[0,1,2,3]);
+});
+test('lifting a finger and touching the loose tip resumes the existing path', () => {
+  const board = { id: 'resume', width: 4, height: 3, difficulty: 'easy', pairs: [[[0,0],[2,3]]] };
+  const before = { 0: [0,1,2] };
+  const begun = beginPath(board, before, 2);
+  assert.equal(begun?.pair, 0);
+  assert.strictEqual(begun?.paths, before);
+  const extended = advancePath(board, begun.paths, begun.pair, 3);
+  assert.deepEqual(extended[0], [0,1,2,3]);
+  assert.deepEqual(advancePath(board, extended, 0, 7)[0], [0,1,2,3,7]);
+});
+
+test('starting from a line segment trims the tail, then permits rerouting', () => {
+  const board = { id: 'reroute', width: 4, height: 3, difficulty: 'easy', pairs: [[[0,0],[2,3]]] };
+  const before = { 0: [0,1,2,3] };
+  const begun = beginPath(board, before, 1);
+  assert.deepEqual(begun?.paths[0], [0,1]);
+  assert.deepEqual(extendPath(board, begun.paths, 0, 5)[0], [0,1,5]);
+  assert.deepEqual(before[0], [0,1,2,3]); // Original state not mutated.
+});
+
+test('either endpoint can redraw a line and blank cells cannot start it', () => {
+  const board = { id: 'restart', width: 3, height: 3, difficulty: 'easy', pairs: [[[0,0],[2,2]]] };
+  const partiallyDrawn = { 0: [0,1,2] };
+  assert.deepEqual(beginPath(board, partiallyDrawn, 8)?.paths[0], [8]);
+  assert.deepEqual(beginPath(board, partiallyDrawn, 0)?.paths[0], [0]);
+  assert.equal(beginPath(board, partiallyDrawn, 4), null);
+  const finished = { 0: [0,1,2,5,8] };
+  assert.deepEqual(beginPath(board, finished, 8)?.paths[0], [8]);
+});
+
+test('diagonal touch jumps become two legal steps rather than stalling', () => {
+  const board = { id: 'diagonal', width: 3, height: 3, difficulty: 'easy', pairs: [[[0,0],[2,2]]] };
+  assert.deepEqual(advancePath(board, {0:[0]}, 0, 4)[0], [0,1,4]);
+  assert.deepEqual(advancePath(board, {0:[0,1]}, 0, 4)[0], [0,1,4]);
+});
+
+test('diagonal smoothing never crosses another path or a foreign endpoint', () => {
+  const board = { id: 'block', width: 3, height: 3, difficulty: 'easy', pairs: [[[0,0],[2,2]],[[0,1],[1,0]]] };
+  const state = {0:[0],1:[1]};
+  assert.strictEqual(advancePath(board, state, 0, 4), state);
+});
+
+test('crossing an earlier section of your own path does not erase it', () => {
+  const board = { id: 'loop', width: 4, height: 4, difficulty: 'easy', pairs: [[[0,0],[3,3]]] };
+  const state = {0:[0,1,2,6,5]};
+  assert.strictEqual(extendPath(board, state, 0, 1), state);
+  assert.deepEqual(extendPath(board, state, 0, 6)[0], [0,1,2,6]);
 });
