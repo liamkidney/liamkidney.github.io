@@ -272,7 +272,8 @@ function CloverPanel({ size }: { size: number }) {
     setLastEdited(null);
   };
   const share = async () => {
-    const result = run.lastResult ?? run.firstResult;
+    // Only the original completed attempt is shared for a fair comparison.
+    const result = run.firstResult;
     if (!result) return;
     const message = cloverResultText(CLOVER, result.collected, result.elapsedMs, CLOVER_URL);
     try {
@@ -329,7 +330,7 @@ function CloverPanel({ size }: { size: number }) {
             {result.collected} of {CLOVER.clovers.length} clovers · {formatDuration(result.elapsedMs)}
             {result.practice ? ' · Practice run' : ' · First attempt'}
           </Text>
-          <SmallButton label="Share result ↗" important action={share} />
+          <SmallButton label={result.practice ? "Share first result ↗" : "Share result ↗"} important action={share} />
           <SmallButton label="Try again (practice)" action={reset} />
         </View>
       ) : (
