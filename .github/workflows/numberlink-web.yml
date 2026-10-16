@@ -6,17 +6,13 @@ on:
     paths:
       - 'apps/numberlink/**'
       - '.github/workflows/numberlink-web.yml'
-  pull_request:
-    paths:
-      - 'apps/numberlink/**'
-      - '.github/workflows/numberlink-web.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: numberlink-web-${{ github.ref }}
+  group: numberlink-web
   cancel-in-progress: false
 
 jobs:
@@ -55,13 +51,11 @@ jobs:
           cp -R apps/numberlink/dist/. _site/numberlink/
           touch _site/.nojekyll
       - name: Upload production web bundle
-        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
   deploy:
-    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     permissions:
