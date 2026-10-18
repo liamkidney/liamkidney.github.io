@@ -1,0 +1,37 @@
+name: Validate Approach Dev
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'apps/air-traffic-control/**'
+      - '.github/workflows/air-traffic-control-ci.yml'
+  pull_request:
+    paths:
+      - 'apps/air-traffic-control/**'
+      - '.github/workflows/air-traffic-control-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install app
+        working-directory: apps/air-traffic-control
+        run: npm install --no-audit --no-fund
+      - name: Test game engine
+        working-directory: apps/air-traffic-control
+        run: npm test
+      - name: Build static website
+        working-directory: apps/air-traffic-control
+        run: npm run build
+      - name: Verify generated assets
+        run: |
+          test -s apps/air-traffic-control/dist/index.html
+          test -d apps/air-traffic-control/dist/assets
