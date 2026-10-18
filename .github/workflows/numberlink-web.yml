@@ -1,10 +1,11 @@
-name: Numberlink web build and deploy
+name: Website and games build and deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - 'apps/numberlink/**'
+      - 'apps/air-traffic-control/**'
       - '.github/workflows/numberlink-web.yml'
   workflow_dispatch:
 
@@ -12,45 +13,68 @@ permissions:
   contents: read
 
 concurrency:
-  group: numberlink-web
+  group: website-pages
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out production
         uses: actions/checkout@v4
+        with:
+          ref: main
+          path: production
+
+      - name: Check out development
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: development
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install packages
-        working-directory: apps/numberlink
-        run: npm install --no-audit --no-fund
-      - name: Test puzzle engine
-        working-directory: apps/numberlink
-        run: npm test
-      - name: Type-check app
-        working-directory: apps/numberlink
-        run: npm run typecheck
-      - name: Build website from Expo source
-        working-directory: apps/numberlink
-        run: npm run export:web
-      - name: Verify output
+
+      - name: Build Numberlink without changing its published URL
         run: |
-          test -s apps/numberlink/dist/index.html
-          test -s apps/numberlink/dist/manifest.webmanifest
-          grep -q '/numberlink/' apps/numberlink/dist/index.html
-      - name: Combine root website and Numberlink
+          npm install --prefix production/apps/numberlink --no-audit --no-fund
+          npm test --prefix production/apps/numberlink
+          npm run typecheck --prefix production/apps/numberlink
+          npm run export:web --prefix production/apps/numberlink
+
+      - name: Validate both Air Traffic Control branches
         run: |
-          mkdir -p _site/numberlink
-          cp index.html _site/index.html
-          cp -R js _site/js
-          find . -maxdepth 1 -type f \( -name '*.ico' -o -name '*.png' \) -exec cp {} _site/ \;
-          cp -R apps/numberlink/dist/. _site/numberlink/
+          set -euo pipefail
+          for source in production development; do
+            npm install --prefix "$source/apps/air-traffic-control" --no-audit --no-fund
+            npm test --prefix "$source/apps/air-traffic-control"
+            npm run build --prefix "$source/apps/air-traffic-control"
+            test -s "$source/apps/air-traffic-control/dist/index.html"
+          done
+
+      - name: Combine root website and game environments
+        run: |
+          set -euo pipefail
+          mkdir -p _site/numberlink _site/air-traffic-control/dev
+          cp production/index.html _site/index.html
+          cp -R production/js _site/js
+          find production -maxdepth 1 -type f \( -name '*.ico' -o -name '*.png' \) -exec cp {} _site/ \;
+          cp -R production/apps/numberlink/dist/. _site/numberlink/
+          cp -R production/apps/air-traffic-control/dist/. _site/air-traffic-control/
+          cp -R development/apps/air-traffic-control/dist/. _site/air-traffic-control/dev/
+          PROD_SHA=$(git -C production rev-parse --short=8 HEAD)
+          DEV_SHA=$(git -C development rev-parse --short=8 HEAD)
+          sed -i "s@</head>@<meta name=\"build-sha\" content=\"$PROD_SHA\"></head>@" _site/air-traffic-control/index.html
+          sed -i "s@</head>@<meta name=\"build-sha\" content=\"$DEV_SHA\"></head>@" _site/air-traffic-control/dev/index.html
           touch _site/.nojekyll
-      - name: Upload production web bundle
+          test -s _site/index.html
+          test -s _site/numberlink/index.html
+          test -s _site/air-traffic-control/index.html
+          test -s _site/air-traffic-control/dev/index.html
+
+      - name: Upload website bundle
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
