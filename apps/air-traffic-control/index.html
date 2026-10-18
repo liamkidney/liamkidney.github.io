@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#071923">
+  <meta name="description" content="Guide incoming aircraft safely to the runway by drawing their flight paths.">
+  <title>Approach — Air Traffic Control</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="identity">
+        <div class="radar-mark" aria-hidden="true"><span></span></div>
+        <div><div class="eyebrow">AIR TRAFFIC CONTROL</div><h1>APPROACH</h1></div>
+      </div>
+      <div class="stats" aria-live="polite">
+        <div class="stat"><span class="stat-label">LANDED</span><strong id="landed">0</strong></div>
+        <div class="stat"><span class="stat-label">SCORE</span><strong id="score">0000</strong></div>
+        <div class="stat"><span class="stat-label">INCIDENTS</span><strong id="incidents">0 / 3</strong></div>
+      </div>
+    </header>
+
+    <section class="airspace" aria-label="Radar airspace">
+      <canvas id="sky" aria-label="Aircraft radar. Touch or click an aircraft, then drag a route to the green runway entrance." tabindex="0"></canvas>
+      <span class="sector-label sector-nw" aria-hidden="true">SECTOR 01</span>
+      <span class="sector-label sector-ne" aria-hidden="true">RADAR ONLINE <i></i></span>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <div class="overlay" id="overlay">
+        <div class="panel">
+          <p class="panel-kicker" id="panel-kicker">TOWER CONTROL</p>
+          <h2 id="panel-title">Clear the skies.</h2>
+          <p id="panel-copy">Planes arrive from the edges of the radar. Touch a plane and draw its route into the green runway entrance. Keep aircraft apart. Three incidents end the shift.</p>
+          <button id="panel-action" class="primary" type="button">Start shift <span aria-hidden="true">↗</span></button>
+          <p class="panel-footnote">Designed for touch and mouse · Endless arrivals</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="bottom-bar">
+      <p class="hint"><span class="hint-icon" aria-hidden="true">⌁</span><span><b>GUIDE</b> Drag from an aircraft to the green approach marker</span></p>
+      <div class="controls">
+        <button id="pause" type="button" disabled>Pause</button>
+        <button id="restart" type="button">Restart ↺</button>
+      </div>
+    </footer>
+  </main>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
