@@ -2,11 +2,15 @@ name: Website and games build and deploy
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
     paths:
       - 'apps/numberlink/**'
       - 'apps/air-traffic-control/**'
       - '.github/workflows/numberlink-web.yml'
+  workflow_run:
+    workflows: ["Validate Approach Dev"]
+    types: [completed]
+    branches: [dev]
   workflow_dispatch:
 
 permissions:
@@ -18,6 +22,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Check out production
