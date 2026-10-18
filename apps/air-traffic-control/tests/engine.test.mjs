@@ -78,3 +78,14 @@ test('route assignment is rejected before the shift starts', () => {
   const plane = spawnPlane(game);
   assert.equal(assignRoute(game, plane.id, [{ x: 1, y: 1 }, { x: 3, y: 3 }]), false);
 });
+
+test('an aircraft can be rerouted while in flight', () => {
+  const game = setup();
+  const plane = spawnPlane(game, { x: 50, y: 180 });
+  assert.equal(assignRoute(game, plane.id, [{ x: 50, y: 180 }, { x: 200, y: 200 }]), true);
+  advanceGame(game, 0.05);
+  const marker = runwayFor(game.width, game.height).entry;
+  assert.equal(assignRoute(game, plane.id, [{ x: plane.x, y: plane.y }, { x: 90, y: 430 }, marker]), true);
+  assert.equal(plane.route.landing, true);
+  assert.deepEqual(plane.route.points.at(-1), { x: runwayFor(game.width, game.height).right, y: marker.y });
+});
