@@ -47,7 +47,7 @@ def snapshot(page, label):
 
 def main():
     with sync_playwright() as p:
-        browser=p.chromium.launch(headless=True,args=["--disable-dev-shm-usage", "--disable-http2"])
+        browser=p.firefox.launch(headless=True)
         context=browser.new_context(locale="en-GB",timezone_id="Europe/London",viewport={"width":1365,"height":920})
         page=context.new_page()
         seen=set()
