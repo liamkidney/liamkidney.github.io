@@ -243,9 +243,16 @@ def main():
                             print("DATE_SELECTED",flush=True)
                             page.wait_for_timeout(1000)
                             print("READY_TO_SEARCH",page.locator("body").inner_text()[:1000],flush=True)
-                            search=page.get_by_role("button",name="Search flights",exact=True)
+                            print("SEARCH_CANDIDATES",json.dumps(page.evaluate("""() => [...document.querySelectorAll('button,[role=button]')].filter(e=>/search flights/i.test((e.textContent||'')+' '+(e.getAttribute('aria-label')||''))).slice(0,10).map(e=>({tag:e.tagName,aria:e.getAttribute('aria-label'),text:e.textContent.trim().slice(0,60),disabled:e.disabled,html:e.outerHTML.slice(0,280)}))""")),flush=True)
+                            # Calendar popover may hide other controls from the accessibility tree.
+                            page.keyboard.press("Escape")
+                            page.wait_for_timeout(400)
+                            search=page.locator('button[aria-label="Search flights"]')
+                            if not search.count():
+                                search=page.get_by_text("Search flights",exact=True)
                             print("SEARCH_BUTTON_COUNT",search.count(),flush=True)
                             if search.count():
+                                print("SEARCH_ENABLED",search.first.is_enabled(),"SEARCH_VISIBLE",search.first.is_visible(),flush=True)
                                 search.first.click(timeout=10000)
                                 print("SEARCH_CLICKED",flush=True)
                                 page.wait_for_timeout(11000)
