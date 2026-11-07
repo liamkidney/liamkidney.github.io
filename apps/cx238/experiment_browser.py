@@ -10,8 +10,6 @@ from playwright.sync_api import sync_playwright
 
 HOMES = [
     "https://flights.cathaypacific.com/en_GB.html",
-    "https://www.cathaypacific.com/cx/en_GB.html",
-    "https://book.cathaypacific.com/",
 ]
 
 def sanitized(url):
@@ -132,18 +130,14 @@ def main():
                 page.wait_for_timeout(1900)
                 options("origin query London")
                 print("ORIGIN_SUGGESTIONS",page.locator("body").inner_text()[:1050],flush=True)
-                for label in ("London Heathrow", "London (LHR)", "London"):
-                    if choose(label):
-                        break
+                print("ORIGIN_OPTIONS_DETAILS",json.dumps(page.evaluate("""() => [...document.querySelectorAll('[role=option]')].slice(0,30).map(e=>({text:e.textContent?.trim().slice(0,140),aria:e.getAttribute('aria-label'),html:e.outerHTML.slice(0,420)}))"""),ensure_ascii=False)[:12000],flush=True)
                 page.wait_for_timeout(1500)
                 print("ORIGIN_VALUE",origin.input_value(),flush=True)
                 destination=page.get_by_placeholder("Select a destination").first
                 destination.fill("Hong Kong", timeout=9000)
                 page.wait_for_timeout(1500)
                 options("destination query Hong Kong")
-                for label in ("Hong Kong International", "Hong Kong (HKG)", "Hong Kong"):
-                    if choose(label):
-                        break
+                print("DEST_OPTIONS_DETAILS",json.dumps(page.evaluate("""() => [...document.querySelectorAll('[role=option]')].slice(0,30).map(e=>({text:e.textContent?.trim().slice(0,140),aria:e.getAttribute('aria-label'),html:e.outerHTML.slice(0,420)}))"""),ensure_ascii=False)[:12000],flush=True)
                 page.wait_for_timeout(1500)
                 print("DEST_VALUE",destination.input_value(),flush=True)
                 snapshot(page,"route-picked")
