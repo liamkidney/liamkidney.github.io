@@ -126,13 +126,23 @@ def main():
                 return False
             try:
                 origin=page.get_by_placeholder("Select a departure city").first
-                origin.fill("London", timeout=9000)
+                origin.evaluate("(el) => el.click()")
+                origin.fill("LHR", timeout=9000)
+                print("ORIGIN_ARIA",origin.get_attribute("aria-expanded"),origin.get_attribute("aria-controls"),flush=True)
                 page.wait_for_timeout(1900)
                 options("origin query London")
                 print("ORIGIN_SUGGESTIONS",page.locator("body").inner_text()[:1050],flush=True)
                 print("LHR_OPTIONS",json.dumps(page.evaluate("""() => [...document.querySelectorAll('li[role=option]')].filter(e=>/London|LHR|Heathrow/i.test(e.textContent||'')).slice(0,20).map(e=>({id:e.id,text:e.textContent.trim().slice(0,110),width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}))"""),ensure_ascii=False)[:5000],flush=True)
                 origin_candidates=page.locator('li[role="option"][id^="flight-bookTripPanel__origin-"]').filter(has_text=re.compile(r'\\(LHR\\)',re.I))
                 print("LHR_ORIGIN_CANDIDATES",origin_candidates.count(),flush=True)
+                visible_origin=page.locator('li[role=option]:visible').filter(has_text=re.compile(r'\\(LHR\\)',re.I))
+                print("LHR_VISIBLE_OPTIONS",visible_origin.count(),flush=True)
+                if visible_origin.count():
+                    try:
+                        visible_origin.first.click(timeout=3500)
+                        print("LHR_SELECTED_FROM_AUTOCOMPLETE",flush=True)
+                    except Exception as err:
+                        print("LHR_VISIBLE_CLICK_ERROR",str(err)[:500],flush=True)
                 if origin_candidates.count():
                     try:
                         origin_candidates.first.click(timeout=3500)
@@ -143,12 +153,22 @@ def main():
                 page.wait_for_timeout(1500)
                 print("ORIGIN_VALUE",origin.input_value(),flush=True)
                 destination=page.get_by_placeholder("Select a destination").first
-                destination.fill("Hong Kong", timeout=9000)
+                destination.evaluate("(el) => el.click()")
+                destination.fill("HKG", timeout=9000)
+                print("DEST_ARIA",destination.get_attribute("aria-expanded"),destination.get_attribute("aria-controls"),flush=True)
                 page.wait_for_timeout(1500)
                 options("destination query Hong Kong")
                 print("HKG_OPTIONS",json.dumps(page.evaluate("""() => [...document.querySelectorAll('li[role=option]')].filter(e=>/Hong Kong|HKG/i.test(e.textContent||'')).slice(0,20).map(e=>({id:e.id,text:e.textContent.trim().slice(0,110),width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}))"""),ensure_ascii=False)[:5000],flush=True)
                 dest_candidates=page.locator('li[role="option"][id^="flight-bookTripPanel__destination-"]').filter(has_text=re.compile(r'\\(HKG\\)',re.I))
                 print("HKG_DEST_CANDIDATES",dest_candidates.count(),flush=True)
+                visible_dest=page.locator('li[role=option]:visible').filter(has_text=re.compile(r'\\(HKG\\)',re.I))
+                print("HKG_VISIBLE_OPTIONS",visible_dest.count(),flush=True)
+                if visible_dest.count():
+                    try:
+                        visible_dest.first.click(timeout=3500)
+                        print("HKG_SELECTED_FROM_AUTOCOMPLETE",flush=True)
+                    except Exception as err:
+                        print("HKG_VISIBLE_CLICK_ERROR",str(err)[:500],flush=True)
                 if dest_candidates.count():
                     try:
                         dest_candidates.first.click(timeout=3500)
