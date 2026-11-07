@@ -21,11 +21,5 @@ jobs:
         run: |
           pip install playwright==1.56.0
           python -m playwright install --with-deps firefox
-      - name: Verify ordinary HTTP reachability
-        run: |
-          for host in www.cathaypacific.com flights.cathaypacific.com book.cathaypacific.com; do
-            printf "%s: " "$host"
-            curl --head -L --max-time 12 -sS -o /dev/null -w "%{http_code}\n" "https://$host/" || true
-          done
       - name: Anonymous booking-page reconnaissance
         run: python -u apps/cx238/experiment_browser.py
