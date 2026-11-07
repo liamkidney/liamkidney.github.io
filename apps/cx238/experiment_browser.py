@@ -4,6 +4,7 @@ No booking reference, surname, account or purchase. Log only safe UI metadata
 and API host/path/status; never log cookies, tokens, querystrings or response bodies.
 """
 import json
+import os
 import re
 from urllib.parse import urlsplit
 from playwright.sync_api import sync_playwright
@@ -45,7 +46,14 @@ def snapshot(page, label):
 
 def main():
     with sync_playwright() as p:
-        browser=p.firefox.launch(headless=True)
+        engine=os.environ.get("CATHAY_BROWSER","firefox")
+        if engine=="chromium":
+            browser=p.chromium.launch(headless=True,args=["--disable-http2","--disable-quic"])
+        elif engine=="firefox":
+            browser=p.firefox.launch(headless=True)
+        else:
+            raise ValueError("Unsupported CATHAY_BROWSER")
+        print("BROWSER_ENGINE",engine,flush=True)
         context=browser.new_context(locale="en-GB",timezone_id="Europe/London",viewport={"width":1365,"height":920})
         page=context.new_page()
         seen=set()
@@ -58,6 +66,17 @@ def main():
                     seen.add(marker)
                     print("API",json.dumps({"method":req.method,"host":host,"path":path,"status":r.status}),flush=True)
         context.on("response",on_response)
+        def on_nav_response(r):
+            if r.request.is_navigation_request():
+                host,path=sanitized(r.url)
+                print("DOCUMENT_RESPONSE",json.dumps({"host":host,"path":path,"status":r.status,"method":r.request.method}),flush=True)
+        def on_failed_request(r):
+            if r.is_navigation_request():
+                host,path=sanitized(r.url)
+                print("DOCUMENT_FAILED",json.dumps({"host":host,"path":path,"method":r.method,"failure":r.failure}),flush=True)
+        context.on("response",on_nav_response)
+        context.on("requestfailed",on_failed_request)
+        page.on("framenavigated",lambda f: print("FRAME_NAV",sanitized(f.url),flush=True) if f==page.main_frame else None)
         try:
             loaded = False
             for candidate in HOMES:
