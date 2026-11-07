@@ -298,7 +298,33 @@ def main():
                                 print("OPEN_PAGES",len(context.pages),flush=True)
                                 for i,pg in enumerate(context.pages):
                                     snapshot(pg,"search_result_"+str(i))
-                                    print("RESULT_TEXT",i,pg.locator("body").inner_text()[:3000],flush=True)
+                                    body_text=pg.locator("body").inner_text()
+                                    print("RESULT_TEXT",i,body_text[:3000],flush=True)
+                                    # Only advance if the intended flight is explicitly visible.
+                                    print("CX238_IN_RESULTS",bool(re.search(r'\\bCX\\s?238\\b',body_text,re.I)),flush=True)
+                                    print("NEXT_STEP_OPTIONS",json.dumps(pg.evaluate("""() => [...document.querySelectorAll('button,a,[role=button]')].filter(e=>{
+                                      const r=e.getBoundingClientRect();return r.width>0&&r.height>0;
+                                    }).filter(e=>/select|continue|seat|fare|booking|next/i.test((e.innerText||'')+' '+(e.getAttribute('aria-label')||''))).slice(0,35).map(e=>({
+                                      tag:e.tagName,text:(e.innerText||'').trim().slice(0,100),
+                                      aria:e.getAttribute('aria-label'),disabled:!!e.disabled
+                                    }))"""),ensure_ascii=False)[:6500],flush=True)
+                                    if re.search(r'\\bCX\\s?238\\b',body_text,re.I):
+                                        card=pg.get_by_text(re.compile(r'CX\\s?238',re.I)).first
+                                        print("FLIGHT_FOUND",card.count(),flush=True)
+                                        # Do not select an unverified fare or proceed past passenger data.
+                                        seat=pg.get_by_role("button",name=re.compile("select seat|choose seat|seat map",re.I))
+                                        if seat.count() and seat.first.is_visible():
+                                            seat.first.click(timeout=5000)
+                                            pg.wait_for_timeout(2500)
+                                            print("SEAT_ACTION_CLICKED",flush=True)
+                                            snapshot(pg,"seat_selection")
+                                        else:
+                                            print("SEAT_ACTION_UNAVAILABLE_BEFORE_PASSENGER_STAGE",flush=True)
+                                    try:
+                                        pg.screenshot(path="apps/cx238/booking-stage.png",full_page=False,timeout=8000)
+                                        print("SCREENSHOT_CAPTURED",flush=True)
+                                    except Exception as err:
+                                        print("SCREENSHOT_ERROR",str(err)[:200],flush=True)
                 except Exception as e:
                     print("CALENDAR_ERROR",str(e)[:1300],flush=True)
                 print("FINAL_ROUTE_CABIN_FIELDS",json.dumps(page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('input[name]')].filter(e=>['ORIGIN','DESTINATION','TRIPTYPE','CABINCLASS','DEPARTUREDATE'].includes(e.name)).map(e=>[e.name,e.value]))""")),flush=True)
