@@ -1,100 +1,84 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#111827">
-  <title>CX238 seat watch</title>
-  <style>
-    :root{font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#18202b;background:#f7f8fa}
-    *{box-sizing:border-box}body{margin:0}main{max-width:760px;margin:0 auto;padding:42px 22px 64px}
-    .eyebrow{text-transform:uppercase;letter-spacing:.1em;color:#697586;font-size:.78rem;font-weight:700}
-    h1{font-size:clamp(2rem,6vw,3.2rem);letter-spacing:-.05em;margin:8px 0 3px;line-height:1.1}
-    .sub{color:#5b6777;margin:0 0 30px}.panel{background:#fff;border:1px solid #e7eaf0;border-radius:16px;padding:22px;margin:16px 0}
-    h2{font-size:1rem;letter-spacing:-.02em;margin:0 0 10px}p{margin:8px 0}
-    .info{color:#5b6777}.warn{border-left:4px solid #bd7715;padding:12px 16px;background:#fff8ed;border-radius:8px}
-    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}
-    button{padding:10px 16px;border-radius:10px;background:#1e293b;color:white;border:0;font:inherit;cursor:pointer}
-    .seats{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
-    .seat{border:1px solid #b8c8db;background:#f5f9ff;border-radius:9px;padding:8px 12px;font-weight:700}
-    .small{font-size:.86rem;color:#697586}.error{color:#9f2d2d}
-    a{color:#264d91}code{word-break:break-word}
-    footer{font-size:.87rem;color:#697586;margin-top:26px}
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CX238 — Cathay API monitor</title>
+<style>
+:root{font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#162334;background:#f7f8fa}
+*{box-sizing:border-box}body{margin:0}main{max-width:760px;margin:0 auto;padding:38px 22px 60px}
+.eyebrow{text-transform:uppercase;font-size:.77rem;letter-spacing:.1em;font-weight:700;color:#687484}
+h1{font-size:clamp(2rem,6vw,3.2rem);letter-spacing:-.05em;margin:7px 0 3px}
+.sub{margin:0 0 28px;color:#667488}.panel{background:white;border:1px solid #e5e9ef;border-radius:15px;padding:22px;margin:15px 0}
+h2{font-size:1.05rem;margin:0 0 12px}.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+button{font:inherit;padding:9px 15px;color:white;background:#1f2937;border:0;border-radius:10px;cursor:pointer}
+.value{font-size:1.4rem;font-weight:700;margin:7px 0}.small{font-size:.87rem;color:#67758a}
+.warn{background:#fff8eb;border-left:4px solid #b67b18;border-radius:8px;padding:13px 17px}
+a{color:#31548c}footer{font-size:.87rem;color:#67758a;margin-top:24px}
+</style>
 </head>
 <body>
 <main>
-  <div class="eyebrow">Flight seat monitor</div>
-  <h1>CX238</h1>
-  <p class="sub">London Heathrow → Hong Kong · Thu 19 Nov 2026 · Business class</p>
-
-  <div class="warn"><strong>Not live flight-specific inventory.</strong> This free prototype checks a cached seat-map API keyed by flight number. Its seats may refer to another departure date; do not rely on it to choose or change a seat.</div>
-
-  <section class="panel">
-    <div class="row"><h2>Latest GitHub Actions check</h2><button id="refresh">Refresh</button></div>
-    <p id="state">Loading…</p>
-    <p class="small" id="checked"></p>
-    <p class="small" id="technical"></p>
-  </section>
-
-  <section class="panel">
-    <h2>Cached business-class seat statuses</h2>
-    <p class="info" id="explanation">Waiting for a valid cached map.</p>
-    <div class="seats" id="seats"></div>
-    <p class="small" id="changes"></p>
-  </section>
-  <footer>
-    <p>No booking reference, surname or account credentials are used or stored.</p>
-    <p><a href="https://github.com/liamkidney/liamkidney.github.io/actions/workflows/cx238-seat-check.yml">Check the GitHub Actions runs</a> · <a href="https://github.com/liamkidney/liamkidney.github.io/tree/main/apps/cx238">View source</a></p>
-  </footer>
+<div class="eyebrow">Cathay Pacific direct API</div>
+<h1>CX238</h1>
+<p class="sub">London Heathrow → Hong Kong · Thu 19 Nov 2026 · Business class</p>
+<p class="warn"><strong>Individual seat numbers remain unavailable.</strong> Cathay's public API returns award-ticket availability, not occupied and free seats. The booking seat-map endpoint returned HTTP 500 when queried without a reservation or flight offer.</p>
+<section class="panel">
+<div class="row"><h2>Latest GitHub Actions check</h2><button id="refresh">Refresh</button></div>
+<p class="value" id="state">Loading…</p>
+<p class="small" id="checked"></p><p class="small" id="technical"></p>
+</section>
+<section class="panel">
+<h2>Business-class award availability</h2>
+<p class="value" id="award">—</p>
+<p id="explainer">Waiting for Cathay response.</p>
+<p class="small">Cathay's award calendar covers the LHR–HKG route/date/cabin. It is not a CX238 seat-assignment map and cannot tell you if 11A or 12K is free.</p>
+</section>
+<section class="panel">
+<h2>Seat-by-seat availability</h2>
+<p class="value">Not accessible without booking or offer context</p>
+<p>Cathay's booking seat-map endpoint did not accept a flight-number/date-only request (HTTP 500 on 7 Nov). The script deliberately does not guess seat status or repeatedly retry that request.</p>
+</section>
+<footer>
+<p>No PNR, surname, account credentials, tokens or cookies are used. GitHub Actions checks the public award calendar every two hours through the flight date.</p>
+<p><a href="https://github.com/liamkidney/liamkidney.github.io/actions/workflows/cx238-seat-check.yml">Actions workflow</a> · <a href="https://github.com/liamkidney/liamkidney.github.io/tree/main/apps/cx238">Source</a></p>
+</footer>
 </main>
 <script>
-  const $ = id => document.getElementById(id);
-  const source = "https://raw.githubusercontent.com/liamkidney/liamkidney.github.io/main/apps/cx238/status.json";
-  async function refresh(){
-    $("state").textContent="Loading latest snapshot…";
-    try{
-      const response = await fetch(source+"?t="+Date.now(), {cache:"no-store"});
-      if(!response.ok) throw new Error("GitHub snapshot returned HTTP "+response.status);
-      const data = await response.json();
-      const stateNames = {
-        "not_checked":"Not checked yet",
-        "cached_map_received":"Cached map retrieved",
-        "no_business_seats_in_response":"Map received, but no recognised business-class seats",
-        "no_cached_seat_map":"No seat map cached for CX238",
-        "schema_unrecognised":"API format not recognised",
-        "http_error":"The API rejected the request",
-        "fetch_error":"The API could not be reached",
-        "flight_departed":"Flight date has passed"
-      };
-      $("state").textContent=stateNames[data.state] || data.state || "Unknown status";
-      $("checked").textContent=data.checked_at ? "Last GitHub check: "+new Date(data.checked_at).toLocaleString() : "Not checked";
-      $("technical").textContent="HTTP: "+(data.http_status ?? "—")+(data.error ? " · "+data.error : "");
-      const available=Array.isArray(data.available_business_seats) ? data.available_business_seats : [];
-      const all=data.business_seats || {};
-      $("explanation").textContent=data.state==="cached_map_received"
-        ? "Seats marked available in the cached, undated map: "+available.length+" / "+Object.keys(all).length+". Not verified for 19 November."
-        : "No reliable seat availability data is available from this check.";
-      $("seats").replaceChildren();
-      available.forEach(number=>{
-        const item=document.createElement("span");
-        item.className="seat";
-        item.textContent=number;
-        $("seats").append(item);
-      });
-      $("changes").textContent=(data.newly_available||[]).length
-        ? "Newly available since last cached snapshot: "+data.newly_available.join(", ")
-        : "";
-    } catch(err){
-      $("state").textContent="Could not load published data";
-      $("technical").textContent=String(err);
-      $("explanation").textContent="The GitHub workflow may not have run yet.";
-      $("seats").replaceChildren();
-    }
-  }
-  $("refresh").addEventListener("click",refresh);
-  refresh();
-  setInterval(refresh,300000);
+const $=id=>document.getElementById(id);
+const source="https://raw.githubusercontent.com/liamkidney/liamkidney.github.io/main/apps/cx238/status.json";
+const labels={
+award_calendar_received:"Cathay API connected",
+award_date_missing:"No record for target date",
+http_error:"Cathay API HTTP error",
+network_error:"Cathay API network error",
+invalid_response:"Unexpected Cathay response",
+flight_departed:"Flight has departed",
+not_checked:"Not checked yet"
+};
+async function refresh(){
+$("state").textContent="Loading…";
+try{
+const response=await fetch(source+"?t="+Date.now(),{cache:"no-store"});
+if(!response.ok)throw Error("GitHub snapshot returned "+response.status);
+const data=await response.json();
+$("state").textContent=labels[data.state]||data.state||"Unknown";
+$("checked").textContent=data.checked_at?"Checked "+new Date(data.checked_at).toLocaleString():"";
+$("technical").textContent="HTTP "+(data.http_status??"—")+(data.error?" · "+data.error:"");
+$("award").textContent=data.award_code??"No data";
+$("explainer").textContent=data.award_code==="NA"
+?"Cathay returned NA for business-class award availability on the route/date. This does not imply CX238 is full."
+:data.award_code!=null
+?"Cathay returned award code "+data.award_code+". It is not the status of individual seats."
+:"No award code was available from this check.";
+}catch(error){
+$("state").textContent="Could not load the GitHub snapshot";
+$("technical").textContent=String(error);
+$("award").textContent="—";
+$("explainer").textContent="Review the Actions workflow for details.";
+}
+}
+$("refresh").addEventListener("click",refresh);
+refresh();setInterval(refresh,300000);
 </script>
 </body>
 </html>

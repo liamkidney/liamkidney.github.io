@@ -1,0 +1,27 @@
+name: Probe Cathay APIs (no booking reference)
+on:
+  push:
+    branches:
+      - feature/cathay-direct-probe
+    paths:
+      - 'apps/cx238/probe_cathay.py'
+      - '.github/workflows/cathay-api-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probe Cathay public and anonymous seat-map endpoints
+        run: python apps/cx238/probe_cathay.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cathay-probe
+          path: apps/cx238/cathay_probe.json
