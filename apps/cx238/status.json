@@ -1,0 +1,14 @@
+{
+  "flight": "CX238",
+  "departure_date": "2026-11-19",
+  "checked_at": null,
+  "source": "FlightSeatmap public cached endpoint",
+  "live": false,
+  "date_specific": false,
+  "state": "not_checked",
+  "http_status": null,
+  "business_seats": {},
+  "available_business_seats": [],
+  "newly_available": [],
+  "error": null
+}

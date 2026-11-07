@@ -1,0 +1,49 @@
+name: Check CX238 seat-map source
+
+on:
+  schedule:
+    - cron: '17 */2 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main, feature/cx238-seat-monitor]
+    paths:
+      - 'apps/cx238/**'
+      - '.github/workflows/cx238-seat-check.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cx238-seat-check
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unit tests
+        run: python -m unittest discover -s apps/cx238 -p 'test_*.py' -v
+      - name: Query public cached source from GitHub runner
+        run: python apps/cx238/poll.py
+      - name: Upload diagnostic snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: cx238-seatmap-snapshot
+          path: apps/cx238/status.json
+      - name: Save latest result to main
+        if: github.ref == 'refs/heads/main'
+        run: |
+          if git diff --quiet -- apps/cx238/status.json; then
+            echo "No data change"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/cx238/status.json
+          git commit -m "Update CX238 cached seat-map check"
+          git pull --rebase origin main
+          git push origin HEAD:main

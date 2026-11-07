@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <title>CX238 seat watch</title>
+  <style>
+    :root{font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#18202b;background:#f7f8fa}
+    *{box-sizing:border-box}body{margin:0}main{max-width:760px;margin:0 auto;padding:42px 22px 64px}
+    .eyebrow{text-transform:uppercase;letter-spacing:.1em;color:#697586;font-size:.78rem;font-weight:700}
+    h1{font-size:clamp(2rem,6vw,3.2rem);letter-spacing:-.05em;margin:8px 0 3px;line-height:1.1}
+    .sub{color:#5b6777;margin:0 0 30px}.panel{background:#fff;border:1px solid #e7eaf0;border-radius:16px;padding:22px;margin:16px 0}
+    h2{font-size:1rem;letter-spacing:-.02em;margin:0 0 10px}p{margin:8px 0}
+    .info{color:#5b6777}.warn{border-left:4px solid #bd7715;padding:12px 16px;background:#fff8ed;border-radius:8px}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+    button{padding:10px 16px;border-radius:10px;background:#1e293b;color:white;border:0;font:inherit;cursor:pointer}
+    .seats{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+    .seat{border:1px solid #b8c8db;background:#f5f9ff;border-radius:9px;padding:8px 12px;font-weight:700}
+    .small{font-size:.86rem;color:#697586}.error{color:#9f2d2d}
+    a{color:#264d91}code{word-break:break-word}
+    footer{font-size:.87rem;color:#697586;margin-top:26px}
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Flight seat monitor</div>
+  <h1>CX238</h1>
+  <p class="sub">London Heathrow → Hong Kong · Thu 19 Nov 2026 · Business class</p>
+
+  <div class="warn"><strong>Not live flight-specific inventory.</strong> This free prototype checks a cached seat-map API keyed by flight number. Its seats may refer to another departure date; do not rely on it to choose or change a seat.</div>
+
+  <section class="panel">
+    <div class="row"><h2>Latest GitHub Actions check</h2><button id="refresh">Refresh</button></div>
+    <p id="state">Loading…</p>
+    <p class="small" id="checked"></p>
+    <p class="small" id="technical"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Cached business-class seat statuses</h2>
+    <p class="info" id="explanation">Waiting for a valid cached map.</p>
+    <div class="seats" id="seats"></div>
+    <p class="small" id="changes"></p>
+  </section>
+  <footer>
+    <p>No booking reference, surname or account credentials are used or stored.</p>
+    <p><a href="https://github.com/liamkidney/liamkidney.github.io/actions/workflows/cx238-seat-check.yml">Check the GitHub Actions runs</a> · <a href="https://github.com/liamkidney/liamkidney.github.io/tree/main/apps/cx238">View source</a></p>
+  </footer>
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  const source = "https://raw.githubusercontent.com/liamkidney/liamkidney.github.io/main/apps/cx238/status.json";
+  async function refresh(){
+    $("state").textContent="Loading latest snapshot…";
+    try{
+      const response = await fetch(source+"?t="+Date.now(), {cache:"no-store"});
+      if(!response.ok) throw new Error("GitHub snapshot returned HTTP "+response.status);
+      const data = await response.json();
+      const stateNames = {
+        "not_checked":"Not checked yet",
+        "cached_map_received":"Cached map retrieved",
+        "no_business_seats_in_response":"Map received, but no recognised business-class seats",
+        "no_cached_seat_map":"No seat map cached for CX238",
+        "schema_unrecognised":"API format not recognised",
+        "http_error":"The API rejected the request",
+        "fetch_error":"The API could not be reached",
+        "flight_departed":"Flight date has passed"
+      };
+      $("state").textContent=stateNames[data.state] || data.state || "Unknown status";
+      $("checked").textContent=data.checked_at ? "Last GitHub check: "+new Date(data.checked_at).toLocaleString() : "Not checked";
+      $("technical").textContent="HTTP: "+(data.http_status ?? "—")+(data.error ? " · "+data.error : "");
+      const available=Array.isArray(data.available_business_seats) ? data.available_business_seats : [];
+      const all=data.business_seats || {};
+      $("explanation").textContent=data.state==="cached_map_received"
+        ? "Seats marked available in the cached, undated map: "+available.length+" / "+Object.keys(all).length+". Not verified for 19 November."
+        : "No reliable seat availability data is available from this check.";
+      $("seats").replaceChildren();
+      available.forEach(number=>{
+        const item=document.createElement("span");
+        item.className="seat";
+        item.textContent=number;
+        $("seats").append(item);
+      });
+      $("changes").textContent=(data.newly_available||[]).length
+        ? "Newly available since last cached snapshot: "+data.newly_available.join(", ")
+        : "";
+    } catch(err){
+      $("state").textContent="Could not load published data";
+      $("technical").textContent=String(err);
+      $("explanation").textContent="The GitHub workflow may not have run yet.";
+      $("seats").replaceChildren();
+    }
+  }
+  $("refresh").addEventListener("click",refresh);
+  refresh();
+  setInterval(refresh,300000);
+</script>
+</body>
+</html>
