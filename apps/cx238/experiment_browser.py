@@ -133,9 +133,9 @@ def main():
                 options("origin query London")
                 print("ORIGIN_SUGGESTIONS",page.locator("body").inner_text()[:1050],flush=True)
                 print("LHR_OPTIONS",json.dumps(page.evaluate("""() => [...document.querySelectorAll('li[role=option]')].filter(e=>/London|LHR|Heathrow/i.test(e.textContent||'')).slice(0,20).map(e=>({id:e.id,text:e.textContent.trim().slice(0,110),width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}))"""),ensure_ascii=False)[:5000],flush=True)
-                origin_candidates=page.locator('li[role="option"][id^="flight-bookTripPanel__origin-"]').filter(has_text=re.compile(r'\\(LHR\\)',re.I))
+                origin_candidates=page.locator('li[role="option"][id^="flight-bookTripPanel__origin-"]').filter(has_text="(LHR)")
                 print("LHR_ORIGIN_CANDIDATES",origin_candidates.count(),flush=True)
-                visible_origin=page.locator('li[role=option]:visible').filter(has_text=re.compile(r'\\(LHR\\)',re.I))
+                visible_origin=page.locator('li[role=option]:visible').filter(has_text="(LHR)")
                 print("LHR_VISIBLE_OPTIONS",visible_origin.count(),flush=True)
                 if visible_origin.count():
                     try:
@@ -159,9 +159,9 @@ def main():
                 page.wait_for_timeout(1500)
                 options("destination query Hong Kong")
                 print("HKG_OPTIONS",json.dumps(page.evaluate("""() => [...document.querySelectorAll('li[role=option]')].filter(e=>/Hong Kong|HKG/i.test(e.textContent||'')).slice(0,20).map(e=>({id:e.id,text:e.textContent.trim().slice(0,110),width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}))"""),ensure_ascii=False)[:5000],flush=True)
-                dest_candidates=page.locator('li[role="option"][id^="flight-bookTripPanel__destination-"]').filter(has_text=re.compile(r'\\(HKG\\)',re.I))
+                dest_candidates=page.locator('li[role="option"][id^="flight-bookTripPanel__destination-"]').filter(has_text="(HKG)")
                 print("HKG_DEST_CANDIDATES",dest_candidates.count(),flush=True)
-                visible_dest=page.locator('li[role=option]:visible').filter(has_text=re.compile(r'\\(HKG\\)',re.I))
+                visible_dest=page.locator('li[role=option]:visible').filter(has_text="(HKG)")
                 print("HKG_VISIBLE_OPTIONS",visible_dest.count(),flush=True)
                 if visible_dest.count():
                     try:
