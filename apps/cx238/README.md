@@ -1,16 +1,23 @@
-# CX238 seat watch (19 November 2026)
+# Cathay CX238 API monitor
 
-Public prototype at https://liamkidney.github.io/cx238/
+URL: https://liamkidney.github.io/cx238/
 
-- GitHub Actions runs a small Python poller on GitHub-hosted runners every two hours and on manual dispatch.
-- GitHub Pages serves the read-only UI at /cx238/.
-- The workflow commits a small status.json snapshot to main. The page reads it from raw.githubusercontent.com so the existing Pages build need not rerun after every poll.
-- No personal booking reference, surname, cookies, tokens, or login details are used.
-- The only free unauthenticated source currently integrated is FlightSeatmap's **cached** endpoint, GET https://flightseatmap.com/api/chatgpt/seatmap/CX238. The first GitHub-runner probe returned HTTP 200 with **zero decks**, so it currently cannot provide individual seats.
-- Cached data is **not** live seat availability for CX238 on 2026-11-19, and may refer to a different departure date. Do not describe it as live. A proper flight/date-specific provider is still required to meet the original objective.
-- Cathay's award API returns redemption-ticket availability, **not** individual seat status, and has therefore deliberately not been used.
-- Unit tests are entirely offline. The live HTTP probe runs on GitHub, not in the assistant's local Python environment.
-- After 19 November, automatic probes stop but the Actions schedule remains enabled until manually disabled.
+Uses Cathay's own public award calendar, no account or PNR:
+https://api.cathaypacific.com/afr/search/availability/en.LHR.HKG.bus.CX.1.20261119.20261119.json
 
-To run once, open Actions > Check CX238 seat-map source > Run workflow.
-Inspect the Actions logs and the published snapshot to see whether the API is usable.
+On 7 Nov 2026, the GitHub runner returned HTTP 200 and code NA for 19 Nov.
+This is award-ticket availability for business class on the LHR-HKG route. It is NOT the
+availability of individual seats such as 11A or 12K, and is not necessarily CX238-specific.
+
+A single anonymous POST to the Cathay Manage Booking seat-map API with only
+flight/date returned HTTP 500 and no seat map. The diagnostic run is at
+https://github.com/liamkidney/liamkidney.github.io/actions/runs/42366375720 .
+The one-shot diagnostic is NOT part of scheduled polling.
+
+Python standard library only. No booking reference, surname, cookies,
+authentication tokens or API secrets. GitHub Actions checks every two hours
+up to the departure date. Pages displays a committed JSON snapshot.
+Five offline unit tests verify extraction and post-departure behavior.
+
+An authenticated NDC provider's SeatAvailability API may accept a flight offer
+instead of an existing reservation, but access requires partner onboarding.

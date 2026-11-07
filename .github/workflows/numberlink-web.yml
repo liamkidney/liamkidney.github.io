@@ -7,6 +7,7 @@ on:
       - 'apps/numberlink/**'
       - 'apps/air-traffic-control/**'
       - 'apps/cx238/**'
+      - '!apps/cx238/status.json'
       - '.github/workflows/numberlink-web.yml'
   workflow_run:
     workflows: ["Validate Approach Dev"]
