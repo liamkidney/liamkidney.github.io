@@ -8,7 +8,11 @@ import re
 from urllib.parse import urlsplit
 from playwright.sync_api import sync_playwright
 
-HOME = "https://www.cathaypacific.com/cx/en_GB.html"
+HOMES = [
+    "https://flights.cathaypacific.com/en_GB.html",
+    "https://www.cathaypacific.com/cx/en_GB.html",
+    "https://book.cathaypacific.com/",
+]
 
 def sanitized(url):
     parsed = urlsplit(url)
@@ -43,7 +47,7 @@ def snapshot(page, label):
 
 def main():
     with sync_playwright() as p:
-        browser=p.chromium.launch(headless=True,args=["--disable-dev-shm-usage"])
+        browser=p.chromium.launch(headless=True,args=["--disable-dev-shm-usage", "--disable-http2"])
         context=browser.new_context(locale="en-GB",timezone_id="Europe/London",viewport={"width":1365,"height":920})
         page=context.new_page()
         seen=set()
@@ -57,10 +61,21 @@ def main():
                     print("API",json.dumps({"method":req.method,"host":host,"path":path,"status":r.status}),flush=True)
         context.on("response",on_response)
         try:
-            resp=page.goto(HOME,wait_until="domcontentloaded",timeout=45000)
-            print("NAVIGATE",resp.status if resp else None,flush=True)
-            page.wait_for_timeout(8000)
-            snapshot(page,"landing")
+            loaded = False
+            for candidate in HOMES:
+                try:
+                    response = page.goto(candidate, wait_until="domcontentloaded", timeout=25000)
+                    print("NAVIGATE", sanitized(candidate), response.status if response else None, flush=True)
+                    page.wait_for_timeout(4000)
+                    snapshot(page,"landing")
+                    if response and response.status < 400:
+                        loaded = True
+                        break
+                except Exception as err:
+                    print("NAVIGATE_ERROR", sanitized(candidate), type(err).__name__, str(err)[:180],flush=True)
+            if not loaded:
+                print("NO_USABLE_BOOKING_PAGE",flush=True)
+                return
             # Only interact with controls for a public flight search.
             # Never enter personal details or pass through checkout.
             for text in ("Accept all cookies","Accept all","Accept Cookies"):
