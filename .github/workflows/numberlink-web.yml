@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/numberlink/**'
       - 'apps/air-traffic-control/**'
+      - 'apps/cx238/**'
       - '.github/workflows/numberlink-web.yml'
   workflow_run:
     workflows: ["Validate Approach Dev"]
@@ -62,8 +63,9 @@ jobs:
       - name: Combine root website and game environments
         run: |
           set -euo pipefail
-          mkdir -p _site/numberlink _site/air-traffic-control/dev
+          mkdir -p _site/numberlink _site/air-traffic-control/dev _site/cx238
           cp production/index.html _site/index.html
+          cp production/apps/cx238/index.html production/apps/cx238/status.json _site/cx238/
           cp -R production/js _site/js
           find production -maxdepth 1 -type f \( -name '*.ico' -o -name '*.png' \) -exec cp {} _site/ \;
           cp -R production/apps/numberlink/dist/. _site/numberlink/
@@ -75,6 +77,7 @@ jobs:
           sed -i "s@</head>@<meta name=\"build-sha\" content=\"$DEV_SHA\"></head>@" _site/air-traffic-control/dev/index.html
           touch _site/.nojekyll
           test -s _site/index.html
+          test -s _site/cx238/index.html
           test -s _site/numberlink/index.html
           test -s _site/air-traffic-control/index.html
           test -s _site/air-traffic-control/dev/index.html
