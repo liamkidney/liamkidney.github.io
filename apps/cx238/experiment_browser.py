@@ -95,6 +95,63 @@ def main():
                         print("CLICK_ERROR",str(e)[:200],flush=True)
                     break
             snapshot(page,"oneway")
+            def options(label):
+                found=page.evaluate("""() => [...document.querySelectorAll('[role=option],li,[role=listbox],.dropdown__item')].filter(e=>{
+                  const r=e.getBoundingClientRect(); return r.width>0&&r.height>0;
+                }).slice(0,45).map(e=>({
+                  tag:e.tagName,role:e.getAttribute('role'),
+                  text:(e.innerText||'').trim().slice(0,110),
+                  cls:typeof e.className==='string'?e.className.slice(0,85):''
+                }))""")
+                print("OPTIONS",label,json.dumps(found,ensure_ascii=False)[:7000],flush=True)
+            def choose(text):
+                for role in ("option","button"):
+                    loc=page.get_by_role(role).filter(has_text=re.compile(re.escape(text),re.I))
+                    if loc.count():
+                        try:
+                            loc.first.click(timeout=4000)
+                            print("PICK",role,text,flush=True)
+                            return True
+                        except Exception as err:
+                            print("PICK_ERROR",role,str(err)[:130],flush=True)
+                # Exact matching text nodes (React custom combobox).
+                loc=page.get_by_text(re.compile(re.escape(text),re.I))
+                for i in range(min(loc.count(),6)):
+                    try:
+                        el=loc.nth(i)
+                        if el.is_visible():
+                            el.click(timeout=2000)
+                            print("PICK_TEXT",text,i,flush=True)
+                            return True
+                    except Exception:
+                        pass
+                return False
+            try:
+                origin=page.get_by_placeholder("Select a departure city").first
+                origin.click()
+                origin.fill("London")
+                page.wait_for_timeout(1900)
+                options("origin query London")
+                print("ORIGIN_SUGGESTIONS",page.locator("body").inner_text()[:1050],flush=True)
+                for label in ("London Heathrow", "London (LHR)", "London"):
+                    if choose(label):
+                        break
+                page.wait_for_timeout(1500)
+                print("ORIGIN_VALUE",origin.input_value(),flush=True)
+                destination=page.get_by_placeholder("Select a destination").first
+                destination.click()
+                destination.fill("Hong Kong")
+                page.wait_for_timeout(1500)
+                options("destination query Hong Kong")
+                for label in ("Hong Kong International", "Hong Kong (HKG)", "Hong Kong"):
+                    if choose(label):
+                        break
+                page.wait_for_timeout(1500)
+                print("DEST_VALUE",destination.input_value(),flush=True)
+                snapshot(page,"route-picked")
+            except Exception as err:
+                print("ROUTE_UI_ERROR",type(err).__name__,str(err)[:330],flush=True)
+
         except Exception as e:
             print("BROWSER_ERROR",type(e).__name__,str(e)[:600],flush=True)
         finally:
