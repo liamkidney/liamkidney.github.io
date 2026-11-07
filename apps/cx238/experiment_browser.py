@@ -66,6 +66,26 @@ def main():
                     seen.add(marker)
                     print("API",json.dumps({"method":req.method,"host":host,"path":path,"status":r.status}),flush=True)
         context.on("response",on_response)
+        def on_cathay_api_error(r):
+            host,path=sanitized(r.url)
+            if host == "api.cathaypacific.com" and path in (
+                "/tsp-svc/v1.0/create-session",
+                "/tsp-svc/v1.0/air-calendar",
+            ):
+                metadata={"host":host,"path":path,"status":r.status,"method":r.request.method,
+                          "content_type":(r.headers.get("content-type") or "")[:90]}
+                if r.status >= 400:
+                    try:
+                        body=r.json()
+                        if isinstance(body, dict):
+                            metadata["json_keys"]=sorted(body)[:16]
+                            for key in ("code","errorCode","status"):
+                                if key in body and isinstance(body[key],(int,str)):
+                                    metadata[key]=str(body[key])[:70]
+                    except Exception:
+                        metadata["response_format"]="non_json"
+                print("CATHAY_SESSION_DIAGNOSTIC",json.dumps(metadata),flush=True)
+        context.on("response",on_cathay_api_error)
         def on_nav_response(r):
             if r.request.is_navigation_request():
                 host,path=sanitized(r.url)
