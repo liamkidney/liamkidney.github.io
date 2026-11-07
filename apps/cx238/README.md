@@ -6,7 +6,7 @@ Public prototype at https://liamkidney.github.io/cx238/
 - GitHub Pages serves the read-only UI at /cx238/.
 - The workflow commits a small status.json snapshot to main. The page reads it from raw.githubusercontent.com so the existing Pages build need not rerun after every poll.
 - No personal booking reference, surname, cookies, tokens, or login details are used.
-- The only free unauthenticated source currently integrated is FlightSeatmap's **cached** endpoint, GET https://flightseatmap.com/api/chatgpt/seatmap/CX238.
+- The only free unauthenticated source currently integrated is FlightSeatmap's **cached** endpoint, GET https://flightseatmap.com/api/chatgpt/seatmap/CX238. The first GitHub-runner probe returned HTTP 200 with **zero decks**, so it currently cannot provide individual seats.
 - Cached data is **not** live seat availability for CX238 on 2026-11-19, and may refer to a different departure date. Do not describe it as live. A proper flight/date-specific provider is still required to meet the original objective.
 - Cathay's award API returns redemption-ticket availability, **not** individual seat status, and has therefore deliberately not been used.
 - Unit tests are entirely offline. The live HTTP probe runs on GitHub, not in the assistant's local Python environment.
