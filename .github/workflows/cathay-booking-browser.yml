@@ -1,0 +1,25 @@
+name: Cathay pre-booking browser experiment
+on:
+  push:
+    branches: [experiment/cx238-prebooking-browser]
+    paths:
+      - 'apps/cx238/experiment_browser.py'
+      - '.github/workflows/cathay-booking-browser.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  investigate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser
+        run: |
+          pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+      - name: Anonymous booking-page reconnaissance
+        run: python -u apps/cx238/experiment_browser.py
