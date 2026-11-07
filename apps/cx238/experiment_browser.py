@@ -236,8 +236,25 @@ def main():
                             aria:e.getAttribute('aria-label'),text:(e.innerText||'').slice(0,75),
                             outer:e.outerHTML.slice(0,210)
                         }))"""),ensure_ascii=False)[:7000],flush=True)
+                        target=page.get_by_role("button",name="Thursday, November 19, 2026",exact=True)
+                        print("TARGET_DATE_OPTION",target.count(),flush=True)
+                        if target.count():
+                            target.first.click(timeout=4000)
+                            print("DATE_SELECTED",flush=True)
+                            page.wait_for_timeout(1000)
+                            print("READY_TO_SEARCH",page.locator("body").inner_text()[:1000],flush=True)
+                            search=page.get_by_role("button",name="Search flights",exact=True)
+                            print("SEARCH_BUTTON_COUNT",search.count(),flush=True)
+                            if search.count():
+                                search.first.click(timeout=10000)
+                                print("SEARCH_CLICKED",flush=True)
+                                page.wait_for_timeout(11000)
+                                print("OPEN_PAGES",len(context.pages),flush=True)
+                                for i,pg in enumerate(context.pages):
+                                    snapshot(pg,"search_result_"+str(i))
+                                    print("RESULT_TEXT",i,pg.locator("body").inner_text()[:3000],flush=True)
                 except Exception as e:
-                    print("CALENDAR_ERROR",str(e)[:700],flush=True)
+                    print("CALENDAR_ERROR",str(e)[:1300],flush=True)
                 print("FINAL_ROUTE_CABIN_FIELDS",json.dumps(page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('input[name]')].filter(e=>['ORIGIN','DESTINATION','TRIPTYPE','CABINCLASS','DEPARTUREDATE'].includes(e.name)).map(e=>[e.name,e.value]))""")),flush=True)
 
             except Exception as err:
