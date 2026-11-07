@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [firefox, chromium]
+        browser: [firefox]
     env:
       CATHAY_BROWSER: ${{ matrix.browser }}
     steps:
@@ -29,3 +29,10 @@ jobs:
           python -m playwright install --with-deps ${{ matrix.browser }}
       - name: Anonymous booking-page reconnaissance
         run: python -u apps/cx238/experiment_browser.py
+      - name: Capture simulated booking screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cathay-booking-screenshot-${{ matrix.browser }}
+          path: apps/cx238/booking-stage.png
+          if-no-files-found: ignore
