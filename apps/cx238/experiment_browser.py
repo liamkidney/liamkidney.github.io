@@ -128,8 +128,7 @@ def main():
                 return False
             try:
                 origin=page.get_by_placeholder("Select a departure city").first
-                origin.click()
-                origin.fill("London")
+                origin.fill("London", timeout=9000)
                 page.wait_for_timeout(1900)
                 options("origin query London")
                 print("ORIGIN_SUGGESTIONS",page.locator("body").inner_text()[:1050],flush=True)
@@ -139,8 +138,7 @@ def main():
                 page.wait_for_timeout(1500)
                 print("ORIGIN_VALUE",origin.input_value(),flush=True)
                 destination=page.get_by_placeholder("Select a destination").first
-                destination.click()
-                destination.fill("Hong Kong")
+                destination.fill("Hong Kong", timeout=9000)
                 page.wait_for_timeout(1500)
                 options("destination query Hong Kong")
                 for label in ("Hong Kong International", "Hong Kong (HKG)", "Hong Kong"):
@@ -150,7 +148,7 @@ def main():
                 print("DEST_VALUE",destination.input_value(),flush=True)
                 snapshot(page,"route-picked")
             except Exception as err:
-                print("ROUTE_UI_ERROR",type(err).__name__,str(err)[:330],flush=True)
+                print("ROUTE_UI_ERROR",type(err).__name__,str(err)[:1800],flush=True)
 
         except Exception as e:
             print("BROWSER_ERROR",type(e).__name__,str(e)[:600],flush=True)
