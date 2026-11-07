@@ -69,6 +69,19 @@ def poll(now=None):
         with urllib.request.urlopen(request, timeout=25) as response:
             result["http_status"] = response.status
             data = json.loads(response.read(2_000_000).decode("utf-8"))
+        seatmap = unwrap_map(data)
+        first_deck = (seatmap.get("decks") or [{}])[0] if seatmap else {}
+        if not isinstance(first_deck, dict):
+            first_deck = {}
+        first_seat = (first_deck.get("seats") or [{}])[0]
+        result["response_structure"] = {
+            "root_fields": sorted(data)[:30] if isinstance(data, dict) else [],
+            "map_fields": sorted(seatmap)[:30] if seatmap else [],
+            "deck_count": len(seatmap.get("decks", [])) if seatmap else 0,
+            "first_deck_fields": sorted(first_deck)[:30],
+            "first_seat_fields": sorted(first_seat)[:30] if isinstance(first_seat, dict) else [],
+            "first_seat_cabin": str(first_seat.get("cabin", ""))[:50] if isinstance(first_seat, dict) else "",
+        }
         seats = business_seats(data)
         if seats is None:
             result["state"] = "schema_unrecognised"
