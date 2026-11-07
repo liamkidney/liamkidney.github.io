@@ -2,6 +2,15 @@
 
 Last tested: 7 November 2026. Target: CX238, London Heathrow (LHR) to Hong Kong (HKG), business, one-way, Thursday 19 November 2026.
 
+## Simulated booking attempt (7 November 2026)
+
+A further Firefox GitHub Actions run attempted the normal one-way LHR to HKG business-class booking for 19 November. It selected the itinerary inputs and clicked Search flights, but the navigation to `/wdsibe/IBEFacade` failed with **Secure Connection Failed** before any flight results appeared. No `CX238` flight card, seat-selection control, or live seat map was visible. The run captured a screenshot of the failure, without any passenger or booking data.
+
+- [Simulation run](https://github.com/liamkidney/liamkidney.github.io/actions/runs/42371550795)
+- [Screenshot artifact](https://github.com/liamkidney/liamkidney.github.io/actions/runs/42371550795/artifacts/13574470513)
+
+No booking was created and no seat was selected. This does **not** establish whether Cathay would allow seat selection before payment when accessed through a normal consumer browser.
+
 ## Latest result
 
 **We still cannot retrieve individual seat status without booking context.** The anonymous flight search now reaches Cathay's current flight-selection application in some attempts. The application, however, did not load a flight offer or seat map.
