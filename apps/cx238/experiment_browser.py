@@ -180,6 +180,66 @@ def main():
                 print("DEST_VALUE",destination.input_value(),flush=True)
                 print("SEARCH_FIELDS",json.dumps(page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('input[name]')].filter(e=>['ORIGIN','DESTINATION','TRIPTYPE','CABINCLASS','DEPARTUREDATE'].includes(e.name)).map(e=>[e.name,e.value]))""")),flush=True)
                 snapshot(page,"route-picked")
+                # Change to one-way; do not buy anything.
+                print("TRIP_NODES",json.dumps(page.evaluate("""() => [...document.querySelectorAll('[class*=tripType]')].filter(e=>e.getBoundingClientRect().width>0).slice(0,15).map(e=>({tag:e.tagName,cls:e.className,text:(e.innerText||'').slice(0,55)}))"""),ensure_ascii=False)[:2800],flush=True)
+                try:
+                    trip=page.locator(".bookTripPanel__tripType__comboBox")
+                    if trip.count():
+                        trip.first.evaluate("(e)=>e.click()")
+                    else:
+                        txt=page.get_by_text("Return",exact=True)
+                        if txt.count():
+                            txt.first.evaluate("(e)=>e.click()")
+                    page.wait_for_timeout(450)
+                    option=page.locator("#flight-trip-type-option--O:visible")
+                    print("ONEWAY_OPTION_VISIBLE",option.count(),flush=True)
+                    if option.count():
+                        option.first.click(timeout=3500)
+                        print("ONEWAY_SELECTED",flush=True)
+                except Exception as e:
+                    print("TRIP_ERROR",str(e)[:600],flush=True)
+                # Set business class via Cathay's custom cabin-pax dropdown.
+                try:
+                    cabin=page.locator("div.bookTripPanel__cabinPax__comboBox:visible")
+                    print("CABIN_TOGGLE",cabin.count(),flush=True)
+                    if cabin.count():
+                        cabin.first.evaluate("(e)=>e.click()")
+                        page.wait_for_timeout(450)
+                    value=page.locator("span.dropdown__value:visible")
+                    print("CABIN_DROPDOWN",value.count(),flush=True)
+                    if value.count():
+                        value.first.evaluate("(e)=>e.click()")
+                        page.wait_for_timeout(300)
+                    opt=page.locator("li.dropdown__option[aria-label='Business']:visible")
+                    print("BUSINESS_OPTION_VISIBLE",opt.count(),flush=True)
+                    if opt.count():
+                        opt.first.click(timeout=3500)
+                        print("BUSINESS_SELECTED",flush=True)
+                    done=page.get_by_role("button",name="Done",exact=True)
+                    if done.count() and done.first.is_visible():
+                        done.first.click(timeout=3500)
+                        print("CABIN_DONE",flush=True)
+                except Exception as e:
+                    print("CABIN_ERROR",str(e)[:600],flush=True)
+                # Inspect date picker. Stop before purchase or passenger details.
+                try:
+                    cal=page.get_by_role("button",name="Calendar")
+                    print("CALENDAR_BUTTONS",cal.count(),flush=True)
+                    if cal.count():
+                        cal.first.click(timeout=3500)
+                        page.wait_for_timeout(600)
+                        print("CALENDAR_VISIBLE_TEXT",page.locator("body").inner_text()[:1700],flush=True)
+                        print("CALENDAR_CANDIDATES",json.dumps(page.evaluate("""() => [...document.querySelectorAll('[aria-label],button,[role=button]')].filter(e=>{
+                            const rect=e.getBoundingClientRect(); return rect.width>0&&rect.height>0;
+                        }).filter(e=>/19|November|Nov|2026/i.test((e.getAttribute('aria-label')||'')+' '+(e.innerText||''))).slice(0,35).map(e=>({
+                            tag:e.tagName,cls:typeof e.className==='string'?e.className.slice(0,70):'',
+                            aria:e.getAttribute('aria-label'),text:(e.innerText||'').slice(0,75),
+                            outer:e.outerHTML.slice(0,210)
+                        }))"""),ensure_ascii=False)[:7000],flush=True)
+                except Exception as e:
+                    print("CALENDAR_ERROR",str(e)[:700],flush=True)
+                print("FINAL_ROUTE_CABIN_FIELDS",json.dumps(page.evaluate("""() => Object.fromEntries([...document.querySelectorAll('input[name]')].filter(e=>['ORIGIN','DESTINATION','TRIPTYPE','CABINCLASS','DEPARTUREDATE'].includes(e.name)).map(e=>[e.name,e.value]))""")),flush=True)
+
             except Exception as err:
                 print("ROUTE_UI_ERROR",type(err).__name__,str(err)[:1800],flush=True)
 
