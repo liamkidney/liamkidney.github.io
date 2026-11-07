@@ -90,7 +90,7 @@ def poll(now=None):
         else:
             result["business_seats"] = seats
             result["available_business_seats"] = [s for s,v in seats.items() if v == "available"]
-            result["state"] = "cached_map_received" if seats else "no_business_seats_in_response"
+            result["state"] = "cached_map_received" if seats else ("no_cached_seat_map" if not seatmap["decks"] else "no_business_seats_in_response")
     except urllib.error.HTTPError as exc:
         result["http_status"] = exc.code
         result["state"] = "http_error"
