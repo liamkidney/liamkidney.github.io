@@ -1,16 +1,16 @@
 {
-  "award_code": "NA",
+  "award_code": null,
   "cabin": "business",
-  "checked_at": "2026-11-19T20:42:18+00:00",
+  "checked_at": "2026-11-20T03:22:59+00:00",
   "departure_date": "2026-11-19",
   "error": null,
   "flight": "CX238",
-  "http_status": 200,
+  "http_status": null,
   "route": "LHR-HKG",
   "seat_data": [],
   "seat_level_live": false,
   "seat_map_status": "not_available_without_booking_or_offer",
   "source": "Cathay Pacific public award calendar API",
   "source_url": "https://api.cathaypacific.com/afr/search/availability/en.LHR.HKG.bus.CX.1.20261119.20261119.json",
-  "state": "award_calendar_received"
+  "state": "flight_departed"
 }
